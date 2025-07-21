@@ -1,5 +1,5 @@
 use anyhow::Result;
-use solana_sdk::signer::keypair::Keypair;
+use solana_sdk::{pubkey::Pubkey, signer::keypair::Keypair};
 use solana_client::nonblocking::rpc_client::RpcClient;
 
 pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Pubkey) -> Result<()> {
