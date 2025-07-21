@@ -22,3 +22,4 @@ tracing-subscriber = "0.3"
 reqwest        = { version = "0.12", features = ["json"] }
 regex = "1.11.1"
 serde_json = "1.0.141"
+tonic = "0.11"

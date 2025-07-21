@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use solana_sdk::{signature::read_keypair_file, signer::Signer};
 use std::sync::Arc;
@@ -26,7 +26,8 @@ pub struct Config {
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let cfg: Config = toml::from_str(&std::fs::read_to_string("config.toml")?)?;
-    let payer = Arc::new(read_keypair_file("keys/id.json").context("bad keypair file")?);
+    let payer = Arc::new(read_keypair_file("keys/id.json")
+        .map_err(|e| anyhow!("bad keypair file: {}", e))?);
     tokio::spawn(grpc_listener::run(cfg, payer.pubkey()));
     tokio::signal::ctrl_c().await?;
     Ok(())

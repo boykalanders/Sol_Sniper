@@ -5,7 +5,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 
 pub async fn manage(mint: Pubkey, cfg: crate::Config, payer: Pubkey) -> Result<()> {
-    let rpc = RpcClient::new(cfg.rpc_http.clone());
+    let _rpc = RpcClient::new(cfg.rpc_http.clone());
     let entry_price = 1.0; // fetch real price
     let mut max_price: f64 = entry_price;
 
