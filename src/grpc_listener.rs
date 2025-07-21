@@ -1,7 +1,9 @@
 use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
 use yellowstone_grpc_client::GeyserGrpcClient;
-use yellowstone_grpc_proto::geyser::SubscribeRequestFilterTransactionsV2;
+use yellowstone_grpc_proto::prelude::{
+    SubscribeRequest, SubscribeRequestFilterTransactions,
+};
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     let mut client = GeyserGrpcClient::connect(
@@ -16,10 +18,10 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
             let mut m = std::collections::HashMap::new();
             m.insert(
                 "pump_bonk".into(),
-                SubscribeRequestFilterTransactionsV2 {
+                SubscribeRequestFilterTransactions {
                     account_include: vec![
-                        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P".into(), // pumpfun
-                        "BonkFun111111111111111111111111111111111111".into(),   // bonkfun
+                        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P".into(),
+                        "BonkFun111111111111111111111111111111111111".into(),
                     ],
                     ..Default::default()
                 },
@@ -40,10 +42,12 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     Ok(())
 }
 
-fn extract_mint(tx: &yellowstone_grpc_proto::geyser::SubscribeUpdateTransaction) -> Option<Pubkey> {
-    // naive log scanner – replace with real parser
-    let log = tx.transaction.meta.as_ref()?.log_messages.join(" ");
-    let re = regex::Regex::new(r"Mint: (\w{44})").ok()?;
-    let cap = re.captures(&log)?;
-    cap.get(1)?.as_str().parse().ok()
+fn extract_mint(tx: &yellowstone_grpc_proto::prelude::SubscribeUpdateTransaction) -> Option<Pubkey> {
+    // quick-and-dirty log scan
+    let logs = tx.transaction.as_ref()?.meta.as_ref()?.log_messages.join(" ");
+    logs.find("Mint: ").and_then(|i| {
+        let start = i + 6;
+        let end = start + 44;
+        logs.get(start..end)?.parse().ok()
+    })
 }

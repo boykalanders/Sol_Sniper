@@ -1,4 +1,5 @@
 use anyhow::Result;
+use serde_json::json;
 
 pub async fn log(msg: String) {
     let cfg: crate::Config = toml::from_str(

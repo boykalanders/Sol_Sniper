@@ -7,7 +7,7 @@ use tokio::time::sleep;
 pub async fn manage(mint: Pubkey, cfg: crate::Config, payer: Pubkey) -> Result<()> {
     let rpc = RpcClient::new(cfg.rpc_http.clone());
     let entry_price = 1.0; // fetch real price
-    let mut max_price = entry_price;
+    let mut max_price: f64 = entry_price;
 
     loop {
         sleep(Duration::from_millis(1_000)).await;
