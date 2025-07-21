@@ -1,18 +1,16 @@
 use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
-use yellowstone_grpc_client::GeyserGrpcClient;
+use yellowstone_grpc_client::{GeyserGrpcBuilder, GeyserGrpcClient};
 use yellowstone_grpc_proto::prelude::{
     SubscribeRequest, SubscribeRequestFilterTransactions,
 };
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
-    // 8.0 helper: endpoint + token in one call
-    let mut client = GeyserGrpcClient::connect(
-        cfg.grpc_addr.clone(),
-        cfg.grpc_x_token,
-        None,
-    )
-    .await?;
+    // 8.0 builder pattern
+    let mut client = GeyserGrpcBuilder::from_shared(cfg.grpc_addr)?
+        .x_token(cfg.grpc_x_token)?
+        .connect()
+        .await?;
 
     let req = SubscribeRequest {
         transactions: {
@@ -21,8 +19,8 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
                 "pump_bonk".into(),
                 SubscribeRequestFilterTransactions {
                     account_include: vec![
-                        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P".into(), // pumpfun
-                        "BonkFun111111111111111111111111111111111111".into(),   // bonkfun
+                        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P".into(),
+                        "BonkFun111111111111111111111111111111111111".into(),
                     ],
                     ..Default::default()
                 },
@@ -32,8 +30,7 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
         ..Default::default()
     };
 
-    // 8.0 returns a single streaming response
-    let mut stream = client.subscribe(req).await?;
+    let mut stream = client.subscribe_once(req).await?;
     while let Some(update) = stream.next().await {
         for tx in update.transactions {
             if let Some(mint) = extract_mint(&tx) {
