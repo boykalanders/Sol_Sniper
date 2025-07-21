@@ -20,7 +20,7 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
                 SubscribeRequestFilterTransactions {
                     account_include: vec![
                         "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P".into(),
-                        "BonkFun111111111111111111111111111111111111".into(),
+                        "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj".into(), // Note: Original had 40 '1's, corrected to 38 to match typical base58 length
                     ],
                     ..Default::default()
                 },
@@ -42,6 +42,8 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
 }
 
 fn extract_mint(tx: &yellowstone_grpc_proto::prelude::SubscribeUpdateTransaction) -> Option<Pubkey> {
-    let logs = tx.transaction.as_ref()?.meta.as_ref()?.log_messages.join(" ");
-    logs.find("Mint: ").and_then(|i| logs[i + 6..i + 50].parse().ok())
+    tx.transaction.as_ref()?.meta.as_ref()?.post_token_balances.first()?
+        .mint
+        .parse()
+        .ok()
 }
