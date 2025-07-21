@@ -6,8 +6,8 @@ use yellowstone_grpc_proto::prelude::{
 };
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
-    // 8.0 helper: connect + token in one call
-    let mut client = GeyserGrpcClient::connect_with_auth_header(
+    // 8.0 helper: endpoint + token in one call
+    let mut client = GeyserGrpcClient::connect(
         cfg.grpc_addr.clone(),
         cfg.grpc_x_token,
         None,
@@ -21,8 +21,8 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
                 "pump_bonk".into(),
                 SubscribeRequestFilterTransactions {
                     account_include: vec![
-                        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P".into(),
-                        "BonkFun111111111111111111111111111111111111".into(),
+                        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P".into(), // pumpfun
+                        "BonkFun111111111111111111111111111111111111".into(),   // bonkfun
                     ],
                     ..Default::default()
                 },
@@ -32,6 +32,7 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
         ..Default::default()
     };
 
+    // 8.0 returns a single streaming response
     let mut stream = client.subscribe(req).await?;
     while let Some(update) = stream.next().await {
         for tx in update.transactions {
