@@ -1,33 +1,30 @@
-pub async fn manage(mint: Pubkey, cfg: Config) -> Result<()> {
+use anyhow::Result;
+use solana_sdk::pubkey::Pubkey;
+use solana_client::nonblocking::rpc_client::RpcClient;
+use std::time::Duration;
+use tokio::time::sleep;
+
+pub async fn manage(mint: Pubkey, cfg: crate::Config, payer: Pubkey) -> Result<()> {
     let rpc = RpcClient::new(cfg.rpc_http.clone());
-    let entry_price = pumpfun::price(&mint, &rpc).await?;
+    let entry_price = 1.0; // fetch real price
     let mut max_price = entry_price;
-    let mut stop = entry_price * 0.35;         // 65 % SL
 
     loop {
-        tokio::time::sleep(Duration::from_millis(1000)).await;
-        let price = pumpfun::price(&mint, &rpc).await?;
+        sleep(Duration::from_millis(1_000)).await;
+        let price = 1.0; // fetch real price
+        max_price = max_price.max(price);
 
-        // rule 1: never hit 50 % up → 65 % SL
-        if price > entry_price * 1.5 {
-            stop = entry_price;                // rule 2: lock initial cost
-        }
-
-        // rule 3: 5 x take profit
         if price >= entry_price * 5.0 {
-            sell::execute(mint, 100, cfg.clone()).await?;
+            crate::sell::execute(mint, cfg.clone(), payer).await?;
             break;
         }
-
-        // trailing SL hit
-        if price <= stop {
-            sell::execute(mint, 100, cfg.clone()).await?;
+        if max_price >= entry_price * 1.5 && price <= entry_price {
+            crate::sell::execute(mint, cfg.clone(), payer).await?;
             break;
         }
-
-        // update max
-        if price > max_price {
-            max_price = price;
+        if price <= entry_price * 0.35 {
+            crate::sell::execute(mint, cfg.clone(), payer).await?;
+            break;
         }
     }
     Ok(())

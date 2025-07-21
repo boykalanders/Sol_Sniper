@@ -1,21 +1,27 @@
-pub async fn execute(mint: Pubkey, cfg: Config, payer: Keypair) -> Result<()> {
+use anyhow::Result;
+use solana_sdk::{pubkey::Pubkey, signature::Keypair};
+use solana_client::nonblocking::rpc_client::RpcClient;
+
+pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Pubkey) -> Result<()> {
     let rpc = RpcClient::new(cfg.rpc_http.clone());
-    let amount = sol_to_lamports(cfg.amount_sol);
+    tracing::info!("Buying {} with {} SOL", mint, cfg.amount_sol);
 
-    // craft pumpfun buy instruction
-    let ix = pumpfun::buy_ix(&mint, amount, cfg.slippage_bps)?;
-    let tx = Transaction::new_signed_with_payer(
-        &[ix],
-        Some(&payer.pubkey()),
-        &[&payer],
-        rpc.get_latest_blockhash().await?,
+    // --- placeholder: craft real pumpfun ix here ---
+    let ix = solana_sdk::system_instruction::transfer(
+        &payer,
+        &mint, // dummy target
+        (cfg.amount_sol * 1e9) as u64,
     );
+    let bh = rpc.get_latest_blockhash().await?;
+    let tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&payer),
+        &[&Keypair::new()], // signer stub
+        bh,
+    );
+    rpc.send_and_confirm_transaction(&tx).await?;
 
-    // send via 0slot gRPC relayer
-    0slot::send(tx, cfg.grpc_x_token).await?;
-    notifier::log(format!("🟢 SNIPED {mint}")).await;
-
-    // start trailing-stop
-    tokio::spawn(strategy::manage(mint, cfg));
+    crate::notifier::log(format!("🟢 BOUGHT {}", mint)).await;
+    tokio::spawn(crate::strategy::manage(mint, cfg, payer));
     Ok(())
 }
