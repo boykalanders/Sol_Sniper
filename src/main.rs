@@ -1,4 +1,5 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
+use serde::Deserialize;
 use solana_sdk::{signature::read_keypair_file, signer::Signer};
 use std::sync::Arc;
 
@@ -8,7 +9,7 @@ mod sell;
 mod strategy;
 mod notifier;
 
-#[derive(serde::Deserialize, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct Config {
     pub rpc_http: String,
     pub grpc_addr: String,
@@ -25,7 +26,7 @@ pub struct Config {
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let cfg: Config = toml::from_str(&std::fs::read_to_string("config.toml")?)?;
-    let payer = Arc::new(read_keypair_file("keys/id.json").map_err(anyhow::Error::from)?);
+    let payer = Arc::new(read_keypair_file("keys/id.json").context("bad keypair file")?);
     tokio::spawn(grpc_listener::run(cfg, payer.pubkey()));
     tokio::signal::ctrl_c().await?;
     Ok(())
