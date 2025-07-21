@@ -1,9 +1,7 @@
 use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
 use yellowstone_grpc_client::GeyserGrpcClient;
-use yellowstone_grpc_proto::geyser::{
-    SubscribeRequest, SubscribeRequestFilterTransactions,
-};
+use yellowstone_grpc_proto::geyser::SubscribeRequestFilterTransactionsV2;
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     let mut client = GeyserGrpcClient::connect(
@@ -18,7 +16,7 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
             let mut m = std::collections::HashMap::new();
             m.insert(
                 "pump_bonk".into(),
-                SubscribeRequestFilterTransactions {
+                SubscribeRequestFilterTransactionsV2 {
                     account_include: vec![
                         "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P".into(), // pumpfun
                         "BonkFun111111111111111111111111111111111111".into(),   // bonkfun
