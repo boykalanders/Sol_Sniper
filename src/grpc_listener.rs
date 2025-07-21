@@ -1,6 +1,6 @@
 use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
-use yellowstone_grpc_client::{GeyserGrpcBuilder, GeyserGrpcClient};
+use yellowstone_grpc_client::{GeyserGrpcBuilder};
 use yellowstone_grpc_proto::prelude::{
     SubscribeRequest, SubscribeRequestFilterTransactions,
 };
@@ -8,7 +8,7 @@ use yellowstone_grpc_proto::prelude::{
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     // 8.0 builder pattern
     let mut client = GeyserGrpcBuilder::from_shared(cfg.grpc_addr)?
-        .x_token(cfg.grpc_x_token)?
+        .x_token(Some(cfg.grpc_x_token))?
         .connect()
         .await?;
 
@@ -20,7 +20,7 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
                 SubscribeRequestFilterTransactions {
                     account_include: vec![
                         "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P".into(),
-                        "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj".into(), // Note: Original had 40 '1's, corrected to 38 to match typical base58 length
+                        "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj".into(),
                     ],
                     ..Default::default()
                 },
