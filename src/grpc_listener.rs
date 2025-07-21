@@ -1,29 +1,18 @@
 use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
-use tonic::transport::Channel;
-use yellowstone_grpc_client::{GeyserGrpcClient, InterceptedService};
+use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::prelude::{
-    geyser_client::GeyserClient, health_client::HealthClient,
     SubscribeRequest, SubscribeRequestFilterTransactions,
 };
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
-    // Build the channel first
-    let channel = Channel::from_shared(cfg.grpc_addr.clone())?
-        .connect()
-        .await?;
-
-    // Wrap with interceptor (token)
-    let interceptor = move |mut req: tonic::Request<()>| {
-        req.metadata_mut()
-            .insert("x-token", cfg.grpc_x_token.parse().unwrap());
-        Ok(req)
-    };
-
-    let health = HealthClient::with_interceptor(channel.clone(), interceptor.clone());
-    let geyser = GeyserClient::with_interceptor(channel, interceptor);
-
-    let client = GeyserGrpcClient::new(health, geyser);
+    // 8.0 helper: connect + token in one call
+    let mut client = GeyserGrpcClient::connect_with_auth_header(
+        cfg.grpc_addr.clone(),
+        cfg.grpc_x_token,
+        None,
+    )
+    .await?;
 
     let req = SubscribeRequest {
         transactions: {
