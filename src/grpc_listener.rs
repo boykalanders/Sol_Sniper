@@ -1,13 +1,12 @@
 use anyhow::Result;
+use futures_util::stream::{StreamExt, TryStreamExt};   // <-- changed import
 use solana_sdk::pubkey::Pubkey;
-use yellowstone_grpc_client::{GeyserGrpcBuilder};
+use yellowstone_grpc_client::GeyserGrpcBuilder;
 use yellowstone_grpc_proto::prelude::{
     SubscribeRequest, SubscribeRequestFilterTransactions,
 };
-use futures::stream::{StreamExt, TryStreamExt};
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
-    // 8.0 builder pattern
     let mut client = GeyserGrpcBuilder::from_shared(cfg.grpc_addr)?
         .connect()
         .await?;
