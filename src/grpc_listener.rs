@@ -1,9 +1,9 @@
 use anyhow::Result;
-use futures_util::stream::{StreamExt, TryStreamExt};   // <-- changed import
+use futures_util::stream::TryStreamExt;
 use solana_sdk::pubkey::Pubkey;
 use yellowstone_grpc_client::GeyserGrpcBuilder;
 use yellowstone_grpc_proto::prelude::{
-    SubscribeRequest, SubscribeRequestFilterTransactions,
+    subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
 };
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
@@ -31,7 +31,7 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
 
     let mut stream = client.subscribe_once(req).await?;
     while let Ok(Some(update)) = stream.try_next().await {
-        for tx in update.transactions {
+        if let Some(UpdateOneof::Transaction(tx)) = update.update_oneof {
             if let Some(mint) = extract_mint(&tx) {
                 tokio::spawn(crate::buy::execute(mint, cfg.clone(), payer));
             }
