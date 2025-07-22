@@ -1,12 +1,11 @@
 use anyhow::Result;
 use futures_util::stream::TryStreamExt;
 use solana_sdk::pubkey::Pubkey;
-use yellowstone_grpc_client::{GeyserGrpcClient, Interceptor};
+use yellowstone_grpc_client::{GeyserGrpcClient, ClientTlsConfig};
 use yellowstone_grpc_proto::prelude::{
     subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
 };
 use tracing::info;
-use tonic::transport::ClientTlsConfig;
 use std::time::Duration;
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
