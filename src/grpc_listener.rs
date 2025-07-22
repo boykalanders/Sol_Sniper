@@ -5,13 +5,16 @@ use yellowstone_grpc_client::GeyserGrpcBuilder;
 use yellowstone_grpc_proto::prelude::{
     subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
 };
+use tracing::info;
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     let grpc_addr = cfg.grpc_addr.clone();
-
+    info!("Connecting to gRPC at {}", grpc_addr);
     let mut client = GeyserGrpcBuilder::from_shared(grpc_addr)?
         .connect()
-        .await?;
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to connect to gRPC: {}", e))?;
+    info!("Connected to gRPC");
 
     let req = SubscribeRequest {
         transactions: {
@@ -35,6 +38,7 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     while let Ok(Some(update)) = stream.try_next().await {
         if let Some(UpdateOneof::Transaction(tx)) = update.update_oneof {
             if let Some(mint) = extract_mint(&tx) {
+                info!("Found mint: {}", mint);
                 tokio::spawn(crate::buy::execute(mint, cfg.clone(), payer));
             }
         }
