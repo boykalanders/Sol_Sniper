@@ -8,7 +8,6 @@ use yellowstone_grpc_proto::prelude::{
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     // 8.0 builder pattern
     let mut client = GeyserGrpcBuilder::from_shared(cfg.grpc_addr)?
-        .x_token(Some(cfg.grpc_x_token))?
         .connect()
         .await?;
 
