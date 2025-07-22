@@ -4,6 +4,7 @@ use yellowstone_grpc_client::{GeyserGrpcBuilder};
 use yellowstone_grpc_proto::prelude::{
     SubscribeRequest, SubscribeRequestFilterTransactions,
 };
+use futures::stream::{StreamExt, TryStreamExt};
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     // 8.0 builder pattern
@@ -30,7 +31,7 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     };
 
     let mut stream = client.subscribe_once(req).await?;
-    while let Some(update) = stream.next().await {
+    while let Ok(Some(update)) = stream.try_next().await {
         for tx in update.transactions {
             if let Some(mint) = extract_mint(&tx) {
                 tokio::spawn(crate::buy::execute(mint, cfg.clone(), payer));
