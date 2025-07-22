@@ -7,7 +7,9 @@ use yellowstone_grpc_proto::prelude::{
 };
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
-    let mut client = GeyserGrpcBuilder::from_shared(cfg.grpc_addr)?
+    let grpc_addr = cfg.grpc_addr.clone();
+
+    let mut client = GeyserGrpcBuilder::from_shared(grpc_addr)?
         .connect()
         .await?;
 
