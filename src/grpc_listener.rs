@@ -1,7 +1,7 @@
 use anyhow::Result;
 use futures_util::stream::TryStreamExt;
 use solana_sdk::pubkey::Pubkey;
-use yellowstone_grpc_client::GeyserGrpcBuilder;
+use yellowstone_grpc_client::{GeyserGrpcClient, Interceptor};
 use yellowstone_grpc_proto::prelude::{
     subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
 };
@@ -10,7 +10,11 @@ use tracing::info;
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     let grpc_addr = cfg.grpc_addr.clone();
     info!("Connecting to gRPC at {}", grpc_addr);
-    let mut client = GeyserGrpcBuilder::from_shared(grpc_addr)?
+    let mut client = GeyserGrpcBuilder::build_from_shared(grpc_addr)?
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(10))
+        .tls_config(ClientTlsConfig::new().with_native_roots())?
+        .max_decoding_message_size(1024 * 1024 * 1024)
         .connect()
         .await
         .map_err(|e| anyhow::anyhow!("Failed to connect to gRPC: {}", e))?;
