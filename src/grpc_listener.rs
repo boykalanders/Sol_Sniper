@@ -13,7 +13,7 @@ use {
 
 pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     // 1. Build a plain HTTP/2 channel (no TLS, no x-token)
-    let mut client = GeyserGrpcClient::build_from_shared(&*cfg.grpc_addr)?
+    let mut client = GeyserGrpcClient::build_from_shared(cfg.grpc_addr.clone())?
         .connect_timeout(Duration::from_secs(10))
         .timeout(Duration::from_secs(10))
         .max_decoding_message_size(256 * 1024 * 1024)
