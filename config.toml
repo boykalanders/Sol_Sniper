@@ -1,5 +1,5 @@
-rpc_http   = "http://de.rpc.asuga.io/"
-grpc_addr  = "http://de.grpc.asuga.io:10000/"
+rpc_http   = "https://nl.rpc.asuga.io/"
+grpc_addr  = "https://nl.grpc.asuga.io:10000/"
 grpc_x_token = "YOUR_0SLOT_KEY"
 
 # Telegram & Discord
