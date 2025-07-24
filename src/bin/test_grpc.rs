@@ -1,10 +1,9 @@
 use std::{collections::HashMap, time::Duration};
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use solana_sdk::pubkey::Pubkey;
-use tracing::{error, info};
+use tracing::{info};
 use yellowstone_grpc_client::GeyserGrpcClient;
-use yellowstone_grpc_proto::prelude::{subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions};
+use yellowstone_grpc_proto::prelude::{SubscribeRequest, SubscribeRequestFilterTransactions};
 
 #[derive(Deserialize)]
 struct Config {
