@@ -3,9 +3,13 @@ grpc_addr  = "http://nl.grpc.asuga.io:10000/"
 grpc_x_token = "YOUR_0SLOT_KEY"
 
 # Telegram & Discord
-tg_token   = "7675187926:AAF19_J0yLnIVzgRiV1vRuZO-G1X_YXHDKw"
+tg_token   = "YOUR_TELEGRAM_BOT_TOKEN"
 tg_chat    = "@topsolsniper1_bot"
 discord_webhook = "https://discord.com/api/webhooks/..."
+
+# Discord Bot for signal scraping
+discord_bot_token = "DISCORD_BOT_TOKEN"
+discord_channel_id = "DISCORD_CHANNEL_ID"
 
 # Snipe params
 amount_sol = 0.2            # how much SOL per snipe

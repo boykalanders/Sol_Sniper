@@ -4,6 +4,7 @@ use solana_sdk::{signature::read_keypair_file, signer::Signer};
 use std::sync::Arc;
 
 mod grpc_listener;
+mod discord_listener;
 mod buy;
 mod sell;
 mod strategy;
@@ -17,6 +18,8 @@ pub struct Config {
     pub tg_token: String,
     pub tg_chat: String,
     pub discord_webhook: String,
+    pub discord_bot_token: String,
+    pub discord_channel_id: String,
     pub amount_sol: f64,
     pub slippage_bps: u16,
     pub priority_fee_microlamports: u64,
@@ -28,7 +31,18 @@ async fn main() -> Result<()> {
     let cfg: Config = toml::from_str(&std::fs::read_to_string("config.toml")?)?;
     let payer = Arc::new(read_keypair_file("keys/id.json")
         .map_err(|e| anyhow!("bad keypair file: {}", e))?);
-    tokio::spawn(grpc_listener::run(cfg, payer.pubkey()));
-    tokio::signal::ctrl_c().await?;
+    
+    // Start both listeners concurrently
+    let grpc_task = tokio::spawn(grpc_listener::run(cfg.clone(), payer.pubkey()));
+    let discord_task = tokio::spawn(discord_listener::run(cfg.clone(), payer.pubkey()));
+    
+    info!("Started GRPC listener and Discord signal monitor");
+    
+    // Wait for either to finish or Ctrl+C
+    tokio::select! {
+        _ = grpc_task => info!("GRPC listener ended"),
+        _ = discord_task => info!("Discord listener ended"),
+        _ = tokio::signal::ctrl_c() => info!("Received Ctrl+C, shutting down"),
+    }
     Ok(())
 }
