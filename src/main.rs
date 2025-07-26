@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use solana_sdk::{signature::read_keypair_file, signer::Signer};
 use std::sync::Arc;
+use tracing::info;
 
 mod grpc_listener;
 mod discord_listener;

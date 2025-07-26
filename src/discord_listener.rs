@@ -153,7 +153,7 @@ impl DiscordHandler {
 
     fn calculate_confidence(&self, content: &str) -> f32 {
         let content = content.to_lowercase();
-        let mut confidence = 0.5; // Base confidence
+        let mut confidence: f32 = 0.5; // Base confidence
         
         // Boost confidence for multiple signal indicators
         if content.contains("🚀") { confidence += 0.1; }
