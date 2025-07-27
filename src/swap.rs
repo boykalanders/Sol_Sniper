@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use reqwest;
 use serde_json::{json, Value};
 use solana_sdk::{pubkey::Pubkey, transaction::VersionedTransaction};
-use base64;
+use base64::{self, engine::general_purpose};
 use bincode;
 
 pub async fn get_swap_transaction(
@@ -28,7 +28,7 @@ pub async fn get_swap_transaction(
         .json(&swap_request)
         .send().await?.error_for_status()?.json::<Value>().await?;
     let swap_tx_b64 = swap_response["swapTransaction"].as_str().ok_or(anyhow!("Missing swapTransaction"))?.to_string();
-    let tx_bytes = base64::decode(swap_tx_b64)?;
+    let tx_bytes = general_purpose::STANDARD.decode(swap_tx_b64)?;
     let tx: VersionedTransaction = bincode::deserialize(&tx_bytes)?;
     Ok(tx)
 } 
