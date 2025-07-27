@@ -1,0 +1,22 @@
+rpc_http   = "http://nl.rpc.asuga.io/"
+grpc_addr  = "http://nl.grpc.asuga.io:10000/"
+grpc_x_token = "YOUR_0SLOT_KEY"
+
+# Telegram & Discord
+tg_token   = "YOUR_TELEGRAM_BOT_TOKEN"
+tg_chat    = "@topsolsniper1_bot"
+discord_webhook = "https://discord.com/api/webhooks/..."
+
+# Discord Bot for signal scraping
+discord_token = "YOUR_DISCORD_USER_TOKEN"
+discord_channel_id = "DISCORD_CHANNEL_ID"
+
+# Snipe params
+amount_sol = 0.2            # how much SOL per snipe
+slippage_bps = 500          # 5 %
+priority_fee_microlamports = 100_000
+
+# Exit rules
+trail_up_50_sl = true       # 50 % → set SL = entry
+stop_loss_pct = 65          # if never hit 50 %
+take_profit_pct = 400       # 5 x = 400 % gain
