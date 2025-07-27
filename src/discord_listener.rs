@@ -153,7 +153,7 @@ impl DiscordHandler {
 pub async fn run(config: crate::Config, payer: Pubkey) -> Result<()> {
     let token = &config.discord_token;
     let channel_ids: Vec<u64> = config.discord_channel_id.iter().map(|id| id.parse::<u64>().context("Invalid Discord channel ID")).collect::<Result<Vec<_>>>()?;
-    let target_channel_ids = channel_ids.into_iter().map(ChannelId::new).collect();
+    let target_channel_ids: Vec<ChannelId> = channel_ids.into_iter().map(ChannelId::new).collect();
 
     let intents = GatewayIntents::GUILD_MESSAGES 
         | GatewayIntents::MESSAGE_CONTENT;

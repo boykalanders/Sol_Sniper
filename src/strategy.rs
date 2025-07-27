@@ -1,6 +1,5 @@
 use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
-use solana_client::nonblocking::rpc_client::RpcClient;
 use std::time::Duration;
 use tokio::time::sleep;
 use reqwest;
