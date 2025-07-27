@@ -25,6 +25,7 @@ pub struct DiscordHandler {
 impl EventHandler for DiscordHandler {
     async fn ready(&self, ctx: SerenityContext, ready: Ready) {
         info!("Discord bot {} is connected!", ready.user.name);
+        crate::notifier::log(format!("✅ Discord bot {} is connected!", ready.user.name)).await;
         
         // Set bot activity status
         let activity = ActivityData::watching("for trading signals");
@@ -67,7 +68,6 @@ impl EventHandler for DiscordHandler {
 pub struct TradingSignal {
     pub token_address: Pubkey,
     pub signal_type: String,
-    pub confidence: f32,
 }
 
 impl DiscordHandler {
@@ -112,12 +112,10 @@ impl DiscordHandler {
                             // Additional validation - check if it looks like a token mint
                             if self.is_likely_token_address(&pubkey).await {
                                 let signal_type = self.detect_signal_type(&content);
-                                let confidence = self.calculate_confidence(&content);
                                 
                                 return Some(TradingSignal {
                                     token_address: pubkey,
                                     signal_type,
-                                    confidence,
                                 });
                             }
                         }
@@ -150,21 +148,6 @@ impl DiscordHandler {
             "SIGNAL".to_string()
         }
     }
-
-    fn calculate_confidence(&self, content: &str) -> f32 {
-        let content = content.to_lowercase();
-        let mut confidence: f32 = 0.5; // Base confidence
-        
-        // Boost confidence for multiple signal indicators
-        if content.contains("🚀") { confidence += 0.1; }
-        if content.contains("buy") { confidence += 0.2; }
-        if content.contains("gem") { confidence += 0.15; }
-        if content.contains("new") { confidence += 0.1; }
-        if content.contains("token") { confidence += 0.05; }
-        
-        // Cap at 1.0
-        confidence.min(1.0)
-    }
 }
 
 pub async fn run(config: crate::Config, payer: Pubkey) -> Result<()> {
@@ -189,6 +172,7 @@ pub async fn run(config: crate::Config, payer: Pubkey) -> Result<()> {
     info!("Starting Discord bot to monitor channel ID: {}", channel_id);
 
     if let Err(why) = client.start().await {
+        crate::notifier::log(format!("❌ Discord connection failed: {:?}", why)).await;
         error!("Discord client error: {:?}", why);
         return Err(anyhow::anyhow!("Discord client failed: {}", why));
     }

@@ -4,7 +4,6 @@ use solana_sdk::{signature::read_keypair_file, signer::Signer};
 use std::sync::Arc;
 use tracing::info;
 
-mod grpc_listener;
 mod discord_listener;
 mod buy;
 mod sell;
@@ -37,14 +36,12 @@ async fn main() -> Result<()> {
         .map_err(|e| anyhow!("bad keypair file: {}", e))?);
     
     // Start both listeners concurrently
-    let grpc_task = tokio::spawn(grpc_listener::run(cfg.clone(), payer.pubkey()));
     let discord_task = tokio::spawn(discord_listener::run(cfg.clone(), payer.pubkey()));
     
-    info!("Started GRPC listener and Discord signal monitor");
+    info!("Started Discord signal monitor");
     
     // Wait for either to finish or Ctrl+C
     tokio::select! {
-        _ = grpc_task => info!("GRPC listener ended"),
         _ = discord_task => info!("Discord listener ended"),
         _ = tokio::signal::ctrl_c() => info!("Received Ctrl+C, shutting down"),
     }
