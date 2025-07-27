@@ -168,7 +168,7 @@ impl DiscordHandler {
 }
 
 pub async fn run(config: crate::Config, payer: Pubkey) -> Result<()> {
-    let token = &config.discord_bot_token;
+    let token = &config.discord_token;
     let channel_id = config.discord_channel_id.parse::<u64>()
         .context("Invalid Discord channel ID")?;
 

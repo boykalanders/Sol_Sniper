@@ -19,7 +19,7 @@ pub struct Config {
     pub tg_token: String,
     pub tg_chat: String,
     pub discord_webhook: String,
-    pub discord_bot_token: String,
+    pub discord_token: String,
     pub discord_channel_id: String,
     pub amount_sol: f64,
     pub slippage_bps: u16,

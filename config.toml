@@ -8,7 +8,7 @@ tg_chat    = "@topsolsniper1_bot"
 discord_webhook = "https://discord.com/api/webhooks/..."
 
 # Discord Bot for signal scraping
-discord_bot_token = "DISCORD_BOT_TOKEN"
+discord_token = "YOUR_DISCORD_USER_TOKEN"
 discord_channel_id = "DISCORD_CHANNEL_ID"
 
 # Snipe params
