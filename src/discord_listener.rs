@@ -18,7 +18,7 @@ use tracing::{error, info, warn};
 pub struct DiscordHandler {
     pub config: crate::Config,
     pub payer: Pubkey,
-    pub target_channel_id: ChannelId,
+    pub target_channel_ids: Vec<ChannelId>,
 }
 
 #[async_trait]
@@ -34,7 +34,7 @@ impl EventHandler for DiscordHandler {
 
     async fn message(&self, _ctx: SerenityContext, msg: Message) {
         // Only process messages from the target channel
-        if msg.channel_id != self.target_channel_id {
+        if !self.target_channel_ids.contains(&msg.channel_id) {
             return;
         }
 
@@ -152,8 +152,8 @@ impl DiscordHandler {
 
 pub async fn run(config: crate::Config, payer: Pubkey) -> Result<()> {
     let token = &config.discord_token;
-    let channel_id = config.discord_channel_id.parse::<u64>()
-        .context("Invalid Discord channel ID")?;
+    let channel_ids: Vec<u64> = config.discord_channel_id.iter().map(|id| id.parse::<u64>().context("Invalid Discord channel ID")).collect::<Result<Vec<_>>>()?;
+    let target_channel_ids = channel_ids.into_iter().map(ChannelId::new).collect();
 
     let intents = GatewayIntents::GUILD_MESSAGES 
         | GatewayIntents::MESSAGE_CONTENT;
@@ -161,7 +161,7 @@ pub async fn run(config: crate::Config, payer: Pubkey) -> Result<()> {
     let handler = DiscordHandler {
         config: config.clone(),
         payer,
-        target_channel_id: ChannelId::new(channel_id),
+        target_channel_ids,
     };
 
     let mut client = Client::builder(token, intents)
@@ -169,7 +169,7 @@ pub async fn run(config: crate::Config, payer: Pubkey) -> Result<()> {
         .await
         .context("Failed to create Discord client")?;
 
-    info!("Starting Discord bot to monitor channel ID: {}", channel_id);
+    info!("Starting Discord bot to monitor channel IDs: {:?}", target_channel_ids);
 
     if let Err(why) = client.start().await {
         crate::notifier::log(format!("❌ Discord connection failed: {:?}", why)).await;

@@ -19,7 +19,7 @@ pub struct Config {
     pub tg_chat: String,
     pub discord_webhook: String,
     pub discord_token: String,
-    pub discord_channel_id: String,
+    pub discord_channel_id: Vec<String>,
     pub amount_sol: f64,
     pub slippage_bps: u16,
     pub priority_fee_microlamports: u64,
@@ -32,6 +32,7 @@ pub struct Config {
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let cfg: Config = toml::from_str(&std::fs::read_to_string("config.toml")?)?;
+    crate::notifier::log("Test notification on startup".to_string()).await;
     let payer = Arc::new(read_keypair_file("keys/id.json")
         .map_err(|e| anyhow!("bad keypair file: {}", e))?);
     
