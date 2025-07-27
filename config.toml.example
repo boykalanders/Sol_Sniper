@@ -9,7 +9,7 @@ discord_webhook = "https://discord.com/api/webhooks/..."
 
 # Discord Bot for signal scraping
 discord_token = "YOUR_DISCORD_USER_TOKEN"
-discord_channel_id = "DISCORD_CHANNEL_ID"
+discord_channel_id = ["DISCORD_CHANNEL_ID1", "DISCORD_CHANNEL_ID2"]
 
 # Snipe params
 amount_sol = 0.2            # how much SOL per snipe
