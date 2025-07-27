@@ -7,7 +7,6 @@ use reqwest;
 use serde_json;
 
 pub async fn manage(mint: Pubkey, cfg: crate::Config, payer: Pubkey) -> Result<()> {
-    let rpc = RpcClient::new(cfg.rpc_http.clone());
     let entry_price = get_token_price_in_sol(&mint).await?;
     let mut max_price: f64 = entry_price;
     let take_profit_multiplier = 1.0 + (cfg.take_profit_pct as f64 / 100.0);

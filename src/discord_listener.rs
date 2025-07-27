@@ -161,7 +161,7 @@ pub async fn run(config: crate::Config, payer: Pubkey) -> Result<()> {
     let handler = DiscordHandler {
         config: config.clone(),
         payer,
-        target_channel_ids,
+        target_channel_ids: target_channel_ids.clone(),
     };
 
     let mut client = Client::builder(token, intents)
