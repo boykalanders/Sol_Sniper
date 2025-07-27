@@ -11,8 +11,9 @@ use tokio::sync::mpsc;
 use tokio::time::{interval, Interval};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use std::time::Duration;
+use solana_sdk::signer::keypair::Keypair;
 
-pub async fn run(config: crate::Config, payer: Pubkey, connected: Arc<AtomicBool>) -> Result<()> {
+pub async fn run(config: crate::Config, payer: Arc<Keypair>, connected: Arc<AtomicBool>) -> Result<()> {
     loop {
         match connect_and_listen(&config, payer, &connected).await {
             Ok(_) => break,
@@ -25,7 +26,7 @@ pub async fn run(config: crate::Config, payer: Pubkey, connected: Arc<AtomicBool
     Ok(())
 }
 
-async fn connect_and_listen(config: &crate::Config, payer: Pubkey, connected: &Arc<AtomicBool>) -> Result<()> {
+async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connected: &Arc<AtomicBool>) -> Result<()> {
     let (ws_stream, _) = connect_async("wss://gateway.discord.gg/?v=10&encoding=json").await.context("Failed to connect to Discord Gateway")?;
     let (mut write, mut read) = ws_stream.split();
     let token = config.discord_token.clone();
@@ -85,7 +86,7 @@ async fn connect_and_listen(config: &crate::Config, payer: Pubkey, connected: &A
                         if let Some(signal) = parse_trading_signal(content).await {
                             info!("Trading signal detected: {:?}", signal);
                             let config_clone = config.clone();
-                            let payer_clone = payer;
+                            let payer_clone = payer.clone();
                             tokio::spawn(crate::buy::execute(signal.token_address, config_clone, payer_clone));
                             let notification = format!(
                                 "🚀 Signal detected!\nToken: {}\nSignal: {}\nChannel: {}",

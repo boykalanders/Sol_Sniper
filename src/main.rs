@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
         .map_err(|e| anyhow!("bad keypair file: {}", e))?);
     
     let connected = Arc::new(AtomicBool::new(false));
-    let discord_task = tokio::spawn(discord_listener::run(cfg.clone(), payer.pubkey(), connected.clone()));
+    let discord_task = tokio::spawn(discord_listener::run(cfg.clone(), payer.clone(), connected.clone()));
     
     info!("Started Discord signal monitor");
     
