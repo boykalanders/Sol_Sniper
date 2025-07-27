@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use solana_sdk::{signature::read_keypair_file};
+use solana_sdk::signer::Signer;
 use std::sync::Arc;
 use tracing::info;
 use std::sync::atomic::{AtomicBool, Ordering};
