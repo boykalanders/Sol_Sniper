@@ -24,6 +24,5 @@ regex = "1.11.1"
 serde_json = "1.0.141"
 tonic = "0.11"
 futures-util = "0.3"
-tokio-tungstenite = "0.24"
 url = "2.5"
 tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
