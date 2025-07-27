@@ -24,6 +24,9 @@ pub struct Config {
     pub amount_sol: f64,
     pub slippage_bps: u16,
     pub priority_fee_microlamports: u64,
+    pub take_profit_pct: u32,
+    pub stop_loss_pct: u32,
+    pub trail_up_50_sl: bool,
 }
 
 #[tokio::main]

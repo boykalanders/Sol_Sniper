@@ -53,7 +53,7 @@ async fn get_token_price_in_sol(mint: &Pubkey) -> Result<f64> {
     let client = reqwest::Client::new();
     let url = format!("https://price.jup.ag/v4/price?ids={}&vsToken=So11111111111111111111111111111111111111112", mint);
     let resp = client.get(&url).send().await?;
-    resp.error_for_status()?;
+    let resp = resp.error_for_status()?;
     let json: serde_json::Value = resp.json().await?;
     let price = json["data"][mint.to_string()]["price"].as_f64().unwrap_or(0.0);
     Ok(price)
