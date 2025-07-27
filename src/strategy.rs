@@ -55,7 +55,7 @@ pub async fn manage(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Re
                 if let Some(account_update) = update.update_oneof {
                     if let yellowstone_grpc_proto::prelude::subscribe_update::UpdateOneof::Account(acc) = account_update {
                         let data = acc.account.ok_or(anyhow!("No account in update"))?.data.clone();
-                        if let Ok(curve) = bincode::deserialize(&data) {
+                        if let Ok(curve) = bincode::deserialize::<BondingCurve>(&data) {
                             let price = curve.virtual_sol_reserves as f64 / curve.virtual_token_reserves as f64;
                             max_price = max_price.max(price);
                             sl = sl.max(max_price * trail_multiplier);
