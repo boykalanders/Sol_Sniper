@@ -3,6 +3,7 @@ use serde::Deserialize;
 use solana_sdk::{signature::read_keypair_file, signer::Signer};
 use std::sync::Arc;
 use tracing::info;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 mod discord_listener;
 mod buy;
@@ -36,11 +37,20 @@ async fn main() -> Result<()> {
     let payer = Arc::new(read_keypair_file("keys/id.json")
         .map_err(|e| anyhow!("bad keypair file: {}", e))?);
     
-    // Start both listeners concurrently
-    let discord_task = tokio::spawn(discord_listener::run(cfg.clone(), payer.pubkey()));
+    let connected = Arc::new(AtomicBool::new(false));
+    let discord_task = tokio::spawn(discord_listener::run(cfg.clone(), payer.pubkey(), connected.clone()));
     
     info!("Started Discord signal monitor");
     
+    let connected_clone = connected.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        if !connected_clone.load(Ordering::Relaxed) {
+            crate::notifier::log("❌ Discord connection timeout - check token and network".to_string()).await;
+            tracing::error!("Discord connection timeout");
+        }
+    });
+
     // Wait for either to finish or Ctrl+C
     tokio::select! {
         _ = discord_task => info!("Discord listener ended"),
