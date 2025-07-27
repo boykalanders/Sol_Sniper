@@ -3,6 +3,7 @@ use reqwest;
 use serde_json::{json, Value};
 use solana_sdk::{pubkey::Pubkey, transaction::VersionedTransaction};
 use base64::{self, engine::general_purpose};
+use base64::Engine;
 use bincode;
 
 pub async fn get_swap_transaction(
