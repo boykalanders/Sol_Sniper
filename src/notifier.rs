@@ -18,7 +18,9 @@ pub async fn log(msg: String) {
 
 async fn tg(token: &str, chat: &str, msg: &str) -> Result<()> {
     let url = format!("https://api.telegram.org/bot{token}/sendMessage");
-    reqwest::Client::new()
+    tracing::debug!("Sending to Telegram URL: {}", url);
+    tracing::debug!("Payload: chat_id={}, text={}", chat, msg);
+    let response = reqwest::Client::new()
         .post(&url)
         .json(&serde_json::json!({
             "chat_id": chat,
@@ -26,6 +28,12 @@ async fn tg(token: &str, chat: &str, msg: &str) -> Result<()> {
         }))
         .send()
         .await?;
+    tracing::debug!("Telegram response status: {}", response.status());
+    if !response.status().is_success() {
+        let error_text = response.text().await?;
+        tracing::error!("Telegram API error: {}", error_text);
+        return Err(anyhow::anyhow!("Telegram API failed: {}", error_text));
+    }
     Ok(())
 }
 
