@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
         }
     });
 
-    let grpc_task = tokio::spawn(grpc_listener::run(cfg.clone(), payer.clone()));
+    let grpc_task = tokio::spawn(grpc_listener::run(cfg.clone(), payer.pubkey()));
 
     // Wait for either to finish or Ctrl+C
     tokio::select! {

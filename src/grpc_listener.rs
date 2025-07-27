@@ -7,11 +7,11 @@ use {
     tracing::{error, info},
     yellowstone_grpc_client::GeyserGrpcClient,
     yellowstone_grpc_proto::prelude::{
-        subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
+        SubscribeRequest, SubscribeRequestFilterTransactions,
     },
 };
 
-pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
+pub async fn run(cfg: crate::Config, _payer: Pubkey) -> Result<()> {
     // 1. Build a plain HTTP/2 channel (no TLS, no x-token)
     let mut client = GeyserGrpcClient::build_from_shared(cfg.grpc_addr.clone())?
         .connect_timeout(Duration::from_secs(10))

@@ -8,7 +8,7 @@ use futures_util::stream::TryStreamExt;
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::timeout;
-use tracing::{error, info};
+use tracing::{error};
 use bincode;
 
 #[derive(bincode::Decode, Debug)]
@@ -20,7 +20,7 @@ struct BondingCurve {
 
 pub async fn manage(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
     // Derive bonding curve PDA for Pump.fun
-    let pump_program = Pubkey::new_from_array([0;32]); // Replace with actual Pump.fun program ID: Pubkey::from_str("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P")?;
+    let pump_program = Pubkey::from_str("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P")?;
     let (bonding_curve, _) = Pubkey::find_program_address(&[b"bonding-curve", mint.as_ref()], &pump_program);
 
     // Get initial price (using existing method or calculate)
@@ -52,8 +52,8 @@ pub async fn manage(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Re
             Ok(Ok(Some(update))) => {
                 if let Some(account_update) = update.update_oneof {
                     if let yellowstone_grpc_proto::prelude::subscribe_update::UpdateOneof::Account(acc) = account_update {
-                        let data = acc.account.as_ref()?.data.clone();
-                        if let Ok((curve, _)) = bincode::decode_from_slice(&data, bincode::config::standard()) as Result<(BondingCurve, usize), bincode::Error> {
+                        let data = acc.account.ok_or(anyhow!("No account in update"))?.data.clone();
+                        if let Ok((curve, _)) = bincode::decode_from_slice(&data, bincode::config::standard()) {
                             let price = curve.virtual_sol_reserves as f64 / curve.virtual_token_reserves as f64;
                             max_price = max_price.max(price);
                             sl = sl.max(max_price * trail_multiplier);
