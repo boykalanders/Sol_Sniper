@@ -44,15 +44,13 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     let mut stream = client.subscribe_once(req).await.context("subscribe")?;
 
     // 4. Consume updates
+    // Removed mint detection and buy trigger as per user request
+    // The listener can be extended for other subscriptions if needed
     loop {
         match timeout(Duration::from_secs(30), stream.try_next()).await {
             Ok(Ok(Some(update))) => {
-                if let Some(UpdateOneof::Transaction(tx)) = update.update_oneof {
-                    if let Some(mint) = extract_mint(&tx) {
-                        info!("Found mint: {}", mint);
-                        tokio::spawn(crate::buy::execute(mint, cfg.clone(), payer));
-                    }
-                }
+                // Custom logic can be added here for other gRPC interactions
+                info!("Received gRPC update: {:?}", update);
             }
             Ok(Ok(None)) => {
                 error!("Server closed stream");
@@ -70,16 +68,4 @@ pub async fn run(cfg: crate::Config, payer: Pubkey) -> Result<()> {
     }
 
     Ok(())
-}   
-
-fn extract_mint(tx: &yellowstone_grpc_proto::prelude::SubscribeUpdateTransaction) -> Option<Pubkey> {
-    tx.transaction
-        .as_ref()?
-        .meta
-        .as_ref()?
-        .post_token_balances
-        .first()?
-        .mint
-        .parse()
-        .ok()
 }
