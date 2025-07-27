@@ -10,10 +10,22 @@ use serde_json::{json, Value};
 use tokio::sync::mpsc;
 use tokio::time::{interval, Interval};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
-use url::Url;
 use std::time::Duration;
 
 pub async fn run(config: crate::Config, payer: Pubkey, connected: Arc<AtomicBool>) -> Result<()> {
+    loop {
+        match connect_and_listen(&config, payer, &connected).await {
+            Ok(_) => break,
+            Err(e) => {
+                error!("Discord connection error: {}. Reconnecting in 5s...", e);
+                tokio::time::sleep(Duration::from_secs(5)).await;
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn connect_and_listen(config: &crate::Config, payer: Pubkey, connected: &Arc<AtomicBool>) -> Result<()> {
     let (ws_stream, _) = connect_async("wss://gateway.discord.gg/?v=10&encoding=json").await.context("Failed to connect to Discord Gateway")?;
     let (mut write, mut read) = ws_stream.split();
     let token = config.discord_token.clone();
@@ -89,21 +101,49 @@ pub async fn run(config: crate::Config, payer: Pubkey, connected: Arc<AtomicBool
             }
         }
     }
-    Ok(())
+    info!("Discord WebSocket loop ended");
+    Err(anyhow!("WebSocket disconnected"))
 }
 
 async fn parse_trading_signal(content: &str) -> Option<TradingSignal> {
-    let re_token = Regex::new(r"0x[a-fA-F0-9]{40}").unwrap();
-    let re_signal = Regex::new(r"BUY|SELL").unwrap();
-
-    if let Some(token_match) = re_token.find(content) {
-        let token_address = Pubkey::from_str(&token_match.as_str()).unwrap();
-
-        if let Some(signal_match) = re_signal.find(content) {
-            let signal_type = signal_match.as_str().to_string();
-            return Some(TradingSignal { token_address, signal_type });
+    let content = content.to_lowercase();
+    let signal_patterns = [
+        r"(?i)\b(buy|long|entry|signal|pump|rocket|moon)\b",
+        r"(?i)\b(🚀|📈|💎|🔥|⚡)\b",
+        r"(?i)\b(new\s+token|gem|pick)\b",
+        r"(?i)\b(CA)\b",
+        r"(?i)\b(hello)\b",
+    ];
+    let has_signal = signal_patterns.iter().any(|pattern| {
+        Regex::new(pattern).unwrap().is_match(&content)
+    });
+    if !has_signal {
+        return None;
+    }
+    let token_patterns = [
+        r"([A-Za-z0-9]{32,44})\b",
+        r"(?i)(?:address|contract|token|ca)[:=\s]+([A-Za-z0-9]{32,44})",
+        r"(?i)(?:token|contract|address)\s*[:=]?\s*([A-Za-z0-9]{32,44})",
+    ];
+    for pattern in &token_patterns {
+        if let Ok(re) = Regex::new(pattern) {
+            for cap in re.captures_iter(&content) {
+                if let Some(addr_match) = cap.get(1) {
+                    let addr_str = addr_match.as_str();
+                    if let Ok(pubkey) = Pubkey::from_str(addr_str) {
+                        if is_likely_token_address(&pubkey).await {
+                            let signal_type = detect_signal_type(&content);
+                            return Some(TradingSignal {
+                                token_address: pubkey,
+                                signal_type,
+                            });
+                        }
+                    }
+                }
+            }
         }
     }
+    info!("Signal detected but no valid token address found in: {}", content);
     None
 }
 
