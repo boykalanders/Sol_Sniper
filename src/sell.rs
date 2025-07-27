@@ -4,12 +4,18 @@ use solana_sdk::{pubkey::Pubkey, transaction::VersionedTransaction};
 use std::str::FromStr;
 use std::sync::Arc;
 use solana_sdk::signer::keypair::Keypair;
-use spl_associated_token_account::get_associated_token_address;
 
 pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
     let rpc = RpcClient::new(cfg.rpc_http.clone());
     tracing::info!("Selling {}", mint);
-    let token_account = get_associated_token_address(&payer.pubkey(), &mint);
+
+    let token_program = Pubkey::from_str("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")?;
+    let ata_program = Pubkey::from_str("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")?;
+    let token_account = Pubkey::find_program_address(
+        &[payer.pubkey().as_ref(), token_program.as_ref(), mint.as_ref()],
+        &ata_program
+    ).0;
+
     let balance_resp = rpc.get_token_account_balance(&token_account).await?;
     let amount = balance_resp.amount.parse::<u64>()?;
     if amount == 0 {
