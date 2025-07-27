@@ -1,9 +1,9 @@
 use anyhow::Result;
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::{pubkey::Pubkey, transaction::VersionedTransaction};
+use solana_sdk::{pubkey::Pubkey /*, transaction::VersionedTransaction */};
 use std::str::FromStr;
 use std::sync::Arc;
-use solana_sdk::signer::keypair::Keypair;
+use solana_sdk::{signer::keypair::Keypair, signer::Signer};
 
 pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
     let rpc = RpcClient::new(cfg.rpc_http.clone());
@@ -12,7 +12,7 @@ pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> R
     let token_program = Pubkey::from_str("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")?;
     let ata_program = Pubkey::from_str("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")?;
     let token_account = Pubkey::find_program_address(
-        &[payer.pubkey().as_ref(), token_program.as_ref(), mint.as_ref()],
+        &[&payer.pubkey().to_bytes(), token_program.as_ref(), mint.as_ref()],
         &ata_program
     ).0;
 

@@ -10,7 +10,7 @@ use solana_sdk::signer::keypair::Keypair;
 pub async fn manage(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
     let entry_price = get_token_price_in_sol(&mint).await?;
     let mut max_price: f64 = entry_price;
-    let take_profit_multiplier = 1.0 + (cfg.take_profit_pct as f64 / 100.0);
+    let _take_profit_multiplier = 1.0 + (cfg.take_profit_pct as f64 / 100.0);
     let trail_multiplier = 1.0 - (cfg.stop_loss_pct as f64 / 100.0);
     let mut sl = entry_price * trail_multiplier;
 

@@ -15,7 +15,7 @@ use solana_sdk::signer::keypair::Keypair;
 
 pub async fn run(config: crate::Config, payer: Arc<Keypair>, connected: Arc<AtomicBool>) -> Result<()> {
     loop {
-        match connect_and_listen(&config, payer, &connected).await {
+        match connect_and_listen(&config, payer.clone(), &connected).await {
             Ok(_) => break,
             Err(e) => {
                 error!("Discord connection error: {}. Reconnecting in 5s...", e);

@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
-use solana_sdk::{signature::read_keypair_file, signer::Signer};
+use solana_sdk::{signature::read_keypair_file};
 use std::sync::Arc;
 use tracing::info;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -10,6 +10,7 @@ mod buy;
 mod sell;
 mod strategy;
 mod notifier;
+mod swap;
 
 #[derive(Deserialize, Clone)]
 pub struct Config {

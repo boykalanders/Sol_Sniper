@@ -1,9 +1,9 @@
 use anyhow::Result;
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::{pubkey::Pubkey, transaction::VersionedTransaction};
+use solana_sdk::{pubkey::Pubkey /*, transaction::VersionedTransaction */};
 use std::str::FromStr;
 use std::sync::Arc;
-use solana_sdk::signer::keypair::Keypair;
+use solana_sdk::{signer::keypair::Keypair, signer::Signer};
 
 pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
     let rpc = RpcClient::new(cfg.rpc_http.clone());
