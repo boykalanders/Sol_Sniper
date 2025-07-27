@@ -2,22 +2,19 @@ use anyhow::{Context, Result};
 use regex::Regex;
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
-use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio::time::{interval, Interval};
-use tokio_tungstenite::{connect_async, tungstenite::protocol::Message, MaybeTlsStream, WebSocketStream};
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use url::Url;
 use std::time::Duration;
-use serde_json::Value::Null;
 
 pub async fn run(config: crate::Config, payer: Pubkey, connected: Arc<AtomicBool>) -> Result<()> {
-    let gateway_url = Url::parse("wss://gateway.discord.gg/?v=9&encoding=json")?;
-    let (ws_stream, _) = connect_async(gateway_url).await.context("Failed to connect to Discord Gateway")?;
+    let (ws_stream, _) = connect_async("wss://gateway.discord.gg/?v=10&encoding=json").await.context("Failed to connect to Discord Gateway")?;
     let (mut write, mut read) = ws_stream.split();
     let token = config.discord_token.clone();
     let channel_ids: Vec<String> = config.discord_channel_id.clone();
