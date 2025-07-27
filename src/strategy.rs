@@ -11,8 +11,9 @@ use std::time::Duration;
 use tokio::time::timeout;
 use tracing::{error};
 use bincode;
+use serde::Deserialize;
 
-#[derive(bincode::Decode, Debug)]
+#[derive(Deserialize, Debug)]
 struct BondingCurve {
     virtual_sol_reserves: u64,
     virtual_token_reserves: u64,
@@ -54,7 +55,7 @@ pub async fn manage(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Re
                 if let Some(account_update) = update.update_oneof {
                     if let yellowstone_grpc_proto::prelude::subscribe_update::UpdateOneof::Account(acc) = account_update {
                         let data = acc.account.ok_or(anyhow!("No account in update"))?.data.clone();
-                        if let Ok((curve, _)) = bincode::decode_from_slice::<BondingCurve, _>(&data, bincode::config::standard()) {
+                        if let Ok(curve) = bincode::deserialize(&data) {
                             let price = curve.virtual_sol_reserves as f64 / curve.virtual_token_reserves as f64;
                             max_price = max_price.max(price);
                             sl = sl.max(max_price * trail_multiplier);
@@ -78,6 +79,6 @@ async fn get_initial_price(bonding_curve: &Pubkey, cfg: &crate::Config) -> Resul
     // Implement initial price fetch, perhaps using RPC
     let rpc = solana_client::nonblocking::rpc_client::RpcClient::new(cfg.rpc_http.clone());
     let data = rpc.get_account_data(bonding_curve).await?;
-    let (curve, _): (BondingCurve, _) = bincode::decode_from_slice(&data, bincode::config::standard())?;
+    let curve: BondingCurve = bincode::deserialize(&data)?;
     Ok(curve.virtual_sol_reserves as f64 / curve.virtual_token_reserves as f64)
 }

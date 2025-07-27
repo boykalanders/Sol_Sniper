@@ -30,6 +30,6 @@ pub async fn get_swap_transaction(
         .send().await?.error_for_status()?.json::<Value>().await?;
     let swap_tx_b64 = swap_response["swapTransaction"].as_str().ok_or(anyhow!("Missing swapTransaction"))?.to_string();
     let tx_bytes = general_purpose::STANDARD.decode(swap_tx_b64)?;
-    let (tx, _): (VersionedTransaction, usize) = bincode::decode_from_slice(&tx_bytes, bincode::config::standard())?;
+    let tx: VersionedTransaction = bincode::deserialize(&tx_bytes)?;
     Ok(tx)
 } 
