@@ -27,7 +27,9 @@ pub async fn run(config: crate::Config, payer: Arc<Keypair>, connected: Arc<Atom
 }
 
 async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connected: &Arc<AtomicBool>) -> Result<()> {
-    let (ws_stream, _) = connect_async("wss://gateway.discord.gg/?v=10&encoding=json").await.context("Failed to connect to Discord Gateway")?;
+    let (ws_stream, _) = connect_async("wss://gateway.discord.gg/?v=10&encoding=json")
+        .await
+        .context("Failed to connect to Discord Gateway")?;
     let (mut write, mut read) = ws_stream.split();
     let token = config.discord_token.clone();
     let channel_ids: Vec<String> = config.discord_channel_id.clone();
@@ -50,7 +52,10 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
             let mut interval: Interval = interval(Duration::from_millis(interval_ms));
             loop {
                 interval.tick().await;
-                if let Err(e) = write.send(Message::Text(json!({"op": 1, "d": null}).to_string())).await {
+                if let Err(e) = write
+                    .send(Message::Text(json!({"op": 1, "d": null}).to_string()))
+                    .await
+                {
                     error!("Heartbeat failed: {}", e);
                     break;
                 }
@@ -63,7 +68,9 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
             let event: Value = serde_json::from_str(&text)?;
             match event["op"].as_i64() {
                 Some(10) => {
-                    let heartbeat_interval = event["d"]["heartbeat_interval"].as_u64().unwrap_or(45000) as u64;
+                    let heartbeat_interval = event["d"]["heartbeat_interval"]
+                        .as_u64()
+                        .unwrap_or(45000) as u64;
                     heartbeat_tx.send(heartbeat_interval).await?;
                     info!("Discord Gateway connected");
                     connected.store(true, Ordering::Relaxed);
@@ -83,16 +90,18 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
                             continue;
                         }
                         let content = message["content"].as_str().unwrap_or("");
-                        if let Some(signal) = parse_trading_signal(content).await {
-                            info!("Trading signal detected: {:?}", signal);
+                        if let Some(token_address) = parse_trading_signal(content).await {
+                            info!("Token address detected: {}", token_address);
                             let config_clone = config.clone();
                             let payer_clone = payer.clone();
-                            tokio::spawn(crate::buy::execute(signal.token_address, config_clone, payer_clone));
+                            tokio::spawn(crate::buy::execute(
+                                token_address,
+                                config_clone,
+                                payer_clone,
+                            ));
                             let notification = format!(
-                                "🚀 Signal detected!\nToken: {}\nSignal: {}\nChannel: {}",
-                                signal.token_address,
-                                signal.signal_type,
-                                channel_id
+                                "🚀 Token detected!\nToken: {}\nChannel: {}",
+                                token_address, channel_id
                             );
                             crate::notifier::log(notification).await;
                         }
@@ -106,15 +115,9 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
     Err(anyhow!("WebSocket disconnected"))
 }
 
-async fn parse_trading_signal(content: &str) -> Option<TradingSignal> {
+async fn parse_trading_signal(content: &str) -> Option<Pubkey> {
     let content = content.to_lowercase();
-    let signal_patterns = [
-        r"(?i)\b(buy|long|entry|signal|pump|rocket|moon)\b",
-        r"(?i)\b(🚀|📈|💎|🔥|⚡)\b",
-        r"(?i)\b(new\s+token|gem|pick)\b",
-        r"(?i)\b(CA)\b",
-        r"(?i)\b(hello)\b",
-    ];
+    let signal_patterns = [r"(?i)\b(CA)\b"];
     let has_signal = signal_patterns.iter().any(|pattern| {
         Regex::new(pattern).unwrap().is_match(&content)
     });
@@ -133,11 +136,7 @@ async fn parse_trading_signal(content: &str) -> Option<TradingSignal> {
                     let addr_str = addr_match.as_str();
                     if let Ok(pubkey) = Pubkey::from_str(addr_str) {
                         if is_likely_token_address(&pubkey).await {
-                            let signal_type = detect_signal_type(&content);
-                            return Some(TradingSignal {
-                                token_address: pubkey,
-                                signal_type,
-                            });
+                            return Some(pubkey);
                         }
                     }
                 }
@@ -152,16 +151,7 @@ async fn is_likely_token_address(_pubkey: &Pubkey) -> bool {
     true
 }
 
-fn detect_signal_type(content: &str) -> String {
-    let re_signal = Regex::new(r"BUY|SELL").unwrap();
-    if let Some(signal_match) = re_signal.find(content) {
-        return signal_match.as_str().to_string();
-    }
-    "UNKNOWN".to_string()
-}
-
 #[derive(Debug, Clone)]
 pub struct TradingSignal {
     pub token_address: Pubkey,
-    pub signal_type: String,
-} 
+}
