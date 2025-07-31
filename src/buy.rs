@@ -7,10 +7,38 @@ use solana_sdk::{signer::keypair::Keypair, signer::Signer};
 
 pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
     let rpc = RpcClient::new(cfg.rpc_http.clone());
-    tracing::info!("Buying {} with {} SOL", mint, cfg.amount_sol);
+    tracing::info!("Attempting to buy {} with {} SOL", mint, cfg.amount_sol);
+    
+    // Check token liquidity before attempting to buy
+    tracing::info!("Checking liquidity for token {}...", mint);
+    match crate::swap::check_token_liquidity(&mint, cfg.amount_sol).await {
+        Ok(true) => {
+            tracing::info!("✅ Token {} has sufficient liquidity", mint);
+        }
+        Ok(false) => {
+            let msg = format!("❌ Token {} has insufficient liquidity - skipping", mint);
+            tracing::warn!("{}", msg);
+            crate::notifier::log(msg).await;
+            return Ok(());
+        }
+        Err(e) => {
+            tracing::warn!("Could not check liquidity for {}: {}. Proceeding anyway...", mint, e);
+        }
+    }
+    
     let sol_mint = Pubkey::from_str("So11111111111111111111111111111111111111112")?;
     let amount = (cfg.amount_sol * 1e9_f64) as u64;
-    let mut tx = crate::swap::get_swap_transaction(&cfg, &payer.pubkey(), sol_mint, mint, amount).await?;
+    
+    tracing::info!("Getting swap transaction from Jupiter...");
+    let mut tx = match crate::swap::get_swap_transaction(&cfg, &payer.pubkey(), sol_mint, mint, amount).await {
+        Ok(tx) => tx,
+        Err(e) => {
+            let msg = format!("❌ Failed to get swap route for {}: {}", mint, e);
+            tracing::error!("{}", msg);
+            crate::notifier::log(msg).await;
+            return Err(e);
+        }
+    };
     let bh = rpc.get_latest_blockhash().await?;
     let mut message = tx.message.clone();
     match &mut message {
@@ -25,8 +53,20 @@ pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> R
     let sig = payer.sign_message(message_hash.as_ref());
     tx.message = message;
     tx.signatures = vec![sig];
-    rpc.send_and_confirm_transaction(&tx).await?;
-    crate::notifier::log(format!("🟢 BOUGHT {}", mint)).await;
-    tokio::spawn(crate::strategy::manage(mint, cfg, payer.clone()));
-    Ok(())
+    
+    tracing::info!("Sending transaction to buy {}...", mint);
+    match rpc.send_and_confirm_transaction(&tx).await {
+        Ok(signature) => {
+            tracing::info!("✅ Successfully bought {}, signature: {}", mint, signature);
+            crate::notifier::log(format!("🟢 BOUGHT {} - TX: {}", mint, signature)).await;
+            tokio::spawn(crate::strategy::manage(mint, cfg, payer.clone()));
+            Ok(())
+        }
+        Err(e) => {
+            let msg = format!("❌ Transaction failed for {}: {}", mint, e);
+            tracing::error!("{}", msg);
+            crate::notifier::log(msg).await;
+            Err(e.into())
+        }
+    }
 }

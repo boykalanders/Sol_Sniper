@@ -147,9 +147,67 @@ async fn parse_trading_signal(content: &str) -> Option<Pubkey> {
     None
 }
 
-async fn is_likely_token_address(_pubkey: &Pubkey) -> bool {
+async fn is_likely_token_address(pubkey: &Pubkey) -> bool {
+    // Basic validation - check if it's a valid pubkey format
+    if pubkey.to_string().len() != 44 {
+        return false;
+    }
+    
+    // TODO: Add more sophisticated validation:
+    // - Check if account exists on-chain using RPC
+    // - Verify it's actually a token mint account
+    // - Check for minimum liquidity using Jupiter
+    
+    // For now, accept all valid pubkey formats
+    // You can enable the advanced validation below when ready
+    
+    // Uncomment this to add on-chain validation:
+    // match validate_token_on_chain(pubkey).await {
+    //     Ok(true) => true,
+    //     Ok(false) => {
+    //         tracing::warn!("Token {} is not a valid mint account", pubkey);
+    //         false
+    //     }
+    //     Err(e) => {
+    //         tracing::warn!("Could not validate token {}: {}", pubkey, e);
+    //         true // Accept if we can't check (could be RPC issues)
+    //     }
+    // }
+    
     true
 }
+
+// Uncomment and configure this function to add on-chain validation
+/*
+async fn validate_token_on_chain(pubkey: &Pubkey) -> Result<bool, Box<dyn std::error::Error>> {
+    use solana_client::nonblocking::rpc_client::RpcClient;
+    use solana_account_decoder::UiAccountEncoding;
+    use solana_client::rpc_config::RpcAccountInfoConfig;
+    
+    // You'll need to add your RPC endpoint here
+    let rpc = RpcClient::new("https://api.mainnet-beta.solana.com".to_string());
+    
+    // Check if account exists and is a token mint
+    match rpc.get_account_with_config(
+        pubkey,
+        RpcAccountInfoConfig {
+            encoding: Some(UiAccountEncoding::Base64),
+            ..Default::default()
+        },
+    ).await {
+        Ok(response) => {
+            if let Some(account) = response.value {
+                // Check if it's owned by the token program
+                let token_program = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+                return Ok(account.owner == token_program && account.data.len() >= 82); // Mint account size
+            }
+        }
+        Err(_) => return Ok(false),
+    }
+    
+    Ok(false)
+}
+*/
 
 #[derive(Debug, Clone)]
 pub struct TradingSignal {
