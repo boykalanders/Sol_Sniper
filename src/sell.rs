@@ -38,7 +38,18 @@ pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> R
     let sig = payer.sign_message(message_hash.as_ref());
     tx.message = message;
     tx.signatures = vec![sig];
-    rpc.send_and_confirm_transaction(&tx).await?;
-    crate::notifier::log(format!("🔴 SOLD {}", mint)).await;
+    let signature = rpc.send_and_confirm_transaction(&tx).await?;
+    
+    // Check balance after successful sale
+    match crate::get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
+        Ok(new_balance) => {
+            tracing::info!("💰 Balance after selling {}: {:.4} SOL", mint, new_balance);
+            crate::notifier::log(format!("🔴 SOLD {} | TX: {} | Balance: {:.4} SOL", mint, signature, new_balance)).await;
+        }
+        Err(e) => {
+            tracing::warn!("Could not check balance after sale: {}", e);
+            crate::notifier::log(format!("🔴 SOLD {} - TX: {}", mint, signature)).await;
+        }
+    }
     Ok(())
 }

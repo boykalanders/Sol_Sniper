@@ -7,7 +7,23 @@ use solana_sdk::{signer::keypair::Keypair, signer::Signer};
 
 pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
     let rpc = RpcClient::new(cfg.rpc_http.clone());
-    tracing::info!("Attempting to buy {} with {} SOL", mint, cfg.amount_sol);
+    tracing::info!("🎯 Signal received: attempting to buy {} with {} SOL", mint, cfg.amount_sol);
+    
+    // Check current balance before trade
+    match crate::get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
+        Ok(balance) => {
+            tracing::info!("💰 Current balance before trade: {:.4} SOL", balance);
+            if balance < cfg.amount_sol {
+                let msg = format!("❌ Insufficient balance: {:.4} SOL < {} SOL needed", balance, cfg.amount_sol);
+                tracing::error!("{}", msg);
+                crate::notifier::log(msg).await;
+                return Ok(());
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Could not check balance before trade: {}", e);
+        }
+    }
     
     // Check token liquidity before attempting to buy
     tracing::info!("Checking liquidity for token {}...", mint);
@@ -58,7 +74,20 @@ pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> R
     match rpc.send_and_confirm_transaction(&tx).await {
         Ok(signature) => {
             tracing::info!("✅ Successfully bought {}, signature: {}", mint, signature);
-            crate::notifier::log(format!("🟢 BOUGHT {} - TX: {}", mint, signature)).await;
+            
+            // Check balance after successful trade
+            match crate::get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
+                Ok(new_balance) => {
+                    tracing::info!("💰 Balance after trade: {:.4} SOL", new_balance);
+                    let spent_amount = cfg.amount_sol; // Approximate, actual might vary due to fees
+                    crate::notifier::log(format!("🟢 BOUGHT {} | TX: {} | Balance: {:.4} SOL", mint, signature, new_balance)).await;
+                }
+                Err(e) => {
+                    tracing::warn!("Could not check balance after trade: {}", e);
+                    crate::notifier::log(format!("🟢 BOUGHT {} - TX: {}", mint, signature)).await;
+                }
+            }
+            
             tokio::spawn(crate::strategy::manage(mint, cfg, payer.clone()));
             Ok(())
         }
