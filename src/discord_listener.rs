@@ -33,18 +33,39 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
     let (mut write, mut read) = ws_stream.split();
     let token = config.discord_token.clone();
     let channel_ids: Vec<String> = config.discord_channel_id.clone();
-    let identify = json!({
-        "op": 2,
-        "d": {
-            "token": token,
-            "intents": 33280, // GUILD_MESSAGES (512) + MESSAGE_CONTENT (32768) = 33280
-            "properties": {
-                "$os": "linux",
-                "$browser": "custom",
-                "$device": "custom"
+    // Check if it's a bot token (starts with "Bot ") or user token
+    let is_bot_token = token.starts_with("Bot ");
+    
+    let identify = if is_bot_token {
+        json!({
+            "op": 2,
+            "d": {
+                "token": token,
+                "intents": 33280, // GUILD_MESSAGES (512) + MESSAGE_CONTENT (32768) = 33280
+                "properties": {
+                    "$os": "linux",
+                    "$browser": "custom",
+                    "$device": "custom"
+                }
             }
-        }
-    });
+        })
+    } else {
+        // User token - different format, no intents needed
+        json!({
+            "op": 2,
+            "d": {
+                "token": token,
+                "properties": {
+                    "$os": "Windows",
+                    "$browser": "Chrome",
+                    "$device": "Desktop"
+                }
+            }
+        })
+    };
+    
+    info!("Connecting to Discord as {} token...", if is_bot_token { "bot" } else { "user" });
+    tracing::debug!("Sending identify payload: {}", identify.to_string());
     write.send(Message::Text(identify.to_string())).await?;
     let (heartbeat_tx, mut heartbeat_rx) = mpsc::channel(1);
     tokio::spawn(async move {
@@ -65,33 +86,54 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
     while let Some(msg) = read.next().await {
         let msg = msg.context("WebSocket read error")?;
         if let Message::Text(text) = msg {
+            tracing::debug!("Raw Discord event: {}", text);
             let event: Value = serde_json::from_str(&text)?;
-            match event["op"].as_i64() {
+            let op_code = event["op"].as_i64();
+            tracing::debug!("Discord event op code: {:?}, type: {:?}", op_code, event["t"].as_str());
+            match op_code {
                 Some(10) => {
                     let heartbeat_interval = event["d"]["heartbeat_interval"]
                         .as_u64()
                         .unwrap_or(45000) as u64;
                     heartbeat_tx.send(heartbeat_interval).await?;
-                    info!("Discord Gateway connected");
+                    info!("Discord Gateway HELLO received, heartbeat interval: {}ms", heartbeat_interval);
                     connected.store(true, Ordering::Relaxed);
                     crate::notifier::log("✅ Discord Gateway connected".to_string()).await;
                 }
                 Some(0) => {
                     let event_type = event["t"].as_str().unwrap_or("");
                     if event_type == "READY" {
-                        info!("Discord Gateway ready");
+                        let user_info = &event["d"]["user"];
+                        let username = user_info["username"].as_str().unwrap_or("Unknown");
+                        let user_id = user_info["id"].as_str().unwrap_or("Unknown");
+                        info!("🎯 Discord Gateway READY - Logged in as: {} ({})", username, user_id);
+                        
+                        // Log which guilds we can see
+                        if let Some(guilds) = event["d"]["guilds"].as_array() {
+                            info!("📡 Connected to {} guilds", guilds.len());
+                            for guild in guilds.iter().take(5) { // Show first 5
+                                let guild_id = guild["id"].as_str().unwrap_or("Unknown");
+                                let guild_name = guild["name"].as_str().unwrap_or("Unknown");
+                                info!("  📍 Guild: {} ({})", guild_name, guild_id);
+                            }
+                        }
+                        
+                        info!("🎯 Target channels to monitor: {:?}", channel_ids);
                     } else if event_type == "MESSAGE_CREATE" {
                         let message = &event["d"];
                         let channel_id = message["channel_id"].as_str().unwrap_or("");
                         let author_name = message["author"]["username"].as_str().unwrap_or("Unknown");
                         let content = message["content"].as_str().unwrap_or("");
                         
-                        // Debug: Log all received messages
-                        tracing::debug!("Received message in channel {}: {} - {}", channel_id, author_name, content);
+                        // Debug: Log all received messages with more detail
+                        tracing::info!("📨 Message received - Channel: {}, Author: {}, Content: '{}'", channel_id, author_name, content);
+                        tracing::debug!("Target channels: {:?}", channel_ids);
                         
                         if !channel_ids.contains(&channel_id.to_string()) {
-                            tracing::debug!("Ignoring message from non-target channel: {}", channel_id);
+                            tracing::warn!("❌ Ignoring message from non-target channel: {} (not in {:?})", channel_id, channel_ids);
                             continue;
+                        } else {
+                            tracing::info!("✅ Message is from target channel: {}", channel_id);
                         }
                         
                         if message["author"]["bot"].as_bool().unwrap_or(false) {
@@ -119,7 +161,32 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
                         }
                     }
                 }
-                _ => {}
+                Some(9) => {
+                    // Invalid session - need to reconnect
+                    error!("❌ Discord: Invalid session - token may be expired or invalid");
+                    return Err(anyhow!("Invalid Discord session"));
+                }
+                Some(7) => {
+                    // Reconnect
+                    info!("🔄 Discord: Reconnecting...");
+                    return Err(anyhow!("Discord reconnect requested"));
+                }
+                Some(4) => {
+                    // Authentication failed
+                    let error_code = event["d"].as_i64().unwrap_or(0);
+                    error!("❌ Discord Authentication failed with code: {}", error_code);
+                    match error_code {
+                        4004 => error!("Authentication failed: Invalid token"),
+                        4011 => error!("Authentication failed: Disallowed intents"),
+                        4013 => error!("Authentication failed: Invalid intents"),
+                        4014 => error!("Authentication failed: Disallowed intents (privileged)"),
+                        _ => error!("Authentication failed: Unknown error {}", error_code),
+                    }
+                    return Err(anyhow!("Discord authentication failed: {}", error_code));
+                }
+                _ => {
+                    tracing::debug!("Unhandled Discord op code: {:?}", op_code);
+                }
             }
         }
     }
