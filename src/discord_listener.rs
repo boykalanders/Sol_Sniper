@@ -125,25 +125,20 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
                         let author_name = message["author"]["username"].as_str().unwrap_or("Unknown");
                         let content = message["content"].as_str().unwrap_or("");
                         
-                        // Debug: Log all received messages with more detail
-                        tracing::info!("📨 Message received - Channel: {}, Author: {}, Content: '{}'", channel_id, author_name, content);
-                        tracing::debug!("Target channels: {:?}", channel_ids);
-                        
+                        // Only log messages from target channels
                         if !channel_ids.contains(&channel_id.to_string()) {
-                            tracing::warn!("❌ Ignoring message from non-target channel: {} (not in {:?})", channel_id, channel_ids);
-                            continue;
-                        } else {
-                            tracing::info!("✅ Message is from target channel: {}", channel_id);
+                            continue; // Silently ignore non-target channels
                         }
+                        
+                        tracing::debug!("📨 Message from target channel {}: {} - '{}'", channel_id, author_name, content);
                         
                         if message["author"]["bot"].as_bool().unwrap_or(false) {
-                            tracing::debug!("Ignoring bot message from: {}", author_name);
-                            continue;
+                            continue; // Silently ignore bot messages
                         }
-                        
-                        tracing::info!("Processing message from {} in target channel: {}", author_name, content);
                         if let Some(token_address) = parse_trading_signal(content).await {
-                            info!("🎯 Token address detected from {}: {}", author_name, token_address);
+                            info!("🎯 SIGNAL DETECTED! Token: {} | From: {} | Channel: {}", token_address, author_name, channel_id);
+                            info!("📝 Message content: '{}'", content);
+                            
                             let config_clone = config.clone();
                             let payer_clone = payer.clone();
                             tokio::spawn(crate::buy::execute(
@@ -156,8 +151,6 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
                                 token_address, author_name, channel_id
                             );
                             crate::notifier::log(notification).await;
-                        } else {
-                            tracing::debug!("No token found in message from {}: {}", author_name, content);
                         }
                     }
                 }
