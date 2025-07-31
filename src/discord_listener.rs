@@ -89,7 +89,9 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
                         if message["author"]["bot"].as_bool().unwrap_or(false) {
                             continue;
                         }
+                        
                         let content = message["content"].as_str().unwrap_or("");
+                        let author_name = message["author"]["username"].as_str().unwrap_or("Unknown");
                         if let Some(token_address) = parse_trading_signal(content).await {
                             info!("Token address detected: {}", token_address);
                             let config_clone = config.clone();
@@ -100,8 +102,8 @@ async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connect
                                 payer_clone,
                             ));
                             let notification = format!(
-                                "🚀 Token detected!\nToken: {}\nChannel: {}",
-                                token_address, channel_id
+                                "🚀 Token detected!\nToken: {}\nFrom: {}\nChannel: {}",
+                                token_address, author_name, channel_id
                             );
                             crate::notifier::log(notification).await;
                         }
