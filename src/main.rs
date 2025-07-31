@@ -40,6 +40,11 @@ async fn main() -> Result<()> {
     let payer = Arc::new(read_keypair_file("keys/id.json")
         .map_err(|e| anyhow!("bad keypair file: {}", e))?);
     
+    // Display wallet info
+    info!("💰 Wallet Address: {}", payer.pubkey());
+    info!("💵 Trading with {} SOL per signal", cfg.amount_sol);
+    crate::notifier::log(format!("💰 Bot started with wallet: {}", payer.pubkey())).await;
+    
     let connected = Arc::new(AtomicBool::new(false));
     let discord_task = tokio::spawn(discord_listener::run(cfg.clone(), payer.clone(), connected.clone()));
     
