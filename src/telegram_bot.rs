@@ -162,59 +162,20 @@ Some commands require authorization.
     async fn send_profit_info(&self, chat_id: ChatId) {
         let profit_db = self.profit_db.lock().await;
         
-        // Get detailed profit information
-        match profit_db.get_profit() {
-            Ok(stats) => {
-                let response = format!(
-                    "💰 **Detailed Profit Report**\n\n\
-                    **📈 Total Performance:**\n\
-                    • Total Profit: {:.4} SOL\n\
-                    • Total Trades: {}\n\
-                    • Win Rate: {:.1}%\n\
-                    • Average Profit per Trade: {:.4} SOL\n\n\
-                    **📊 Trading Statistics:**\n\
-                    • Winning Trades: {}\n\
-                    • Losing Trades: {}\n\
-                    • Break-even Trades: {}\n\n\
-                    **⏰ Last Updated:** {}\n\n\
-                    **📋 Summary:**\n\
-                    {}",
-                    stats.total_profit,
-                    stats.total_trades,
-                    stats.win_rate(),
-                    if stats.total_trades > 0 { stats.total_profit / stats.total_trades as f64 } else { 0.0 },
-                    stats.winning_trades,
-                    stats.losing_trades,
-                    stats.total_trades - stats.winning_trades - stats.losing_trades,
-                    stats.updated_at,
-                    profit_db.get_profit_summary().unwrap_or_else(|_| "Unable to get summary".to_string())
-                );
-                
+        match profit_db.get_profit_summary() {
+            Ok(summary) => {
+                let response = format!("📊 **Profit Statistics**\n\n{}", summary);
                 if let Err(e) = self.bot.send_message(chat_id, response).await {
                     error!("Failed to send profit info: {}", e);
                 }
                 
                 // Send notification
-                self.send_notification("📊 Detailed profit info requested").await;
+                self.send_notification(response).await;
             }
             Err(e) => {
-                // Fallback to summary if detailed info fails
-                match profit_db.get_profit_summary() {
-                    Ok(summary) => {
-                        let response = format!("📊 **Profit Statistics**\n\n{}", summary);
-                        if let Err(e) = self.bot.send_message(chat_id, response).await {
-                            error!("Failed to send profit info: {}", e);
-                        }
-                        
-                        // Send notification
-                        self.send_notification("📊 Profit info requested").await;
-                    }
-                    Err(_) => {
-                        let response = format!("❌ Error getting profit data: {}", e);
-                        if let Err(e) = self.bot.send_message(chat_id, response).await {
-                            error!("Failed to send error message: {}", e);
-                        }
-                    }
+                let response = format!("❌ Error getting profit data: {}", e);
+                if let Err(e) = self.bot.send_message(chat_id, response).await {
+                    error!("Failed to send error message: {}", e);
                 }
             }
         }
