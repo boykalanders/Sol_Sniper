@@ -49,7 +49,7 @@ pub async fn get_swap_transaction(
 }
 
 /// Check if a token has sufficient liquidity for trading
-pub async fn check_token_liquidity(token_mint: &Pubkey, min_liquidity_sol: f64) -> Result<bool> {
+pub async fn check_token_liquidity(token_mint: &Pubkey, _min_liquidity_sol: f64) -> Result<bool> {
     let client = reqwest::Client::new();
     let sol_mint = Pubkey::from_str("So11111111111111111111111111111111111111112")?;
     let amount_lamports = (0.001 * 1e9) as u64; // Test with 0.001 SOL
