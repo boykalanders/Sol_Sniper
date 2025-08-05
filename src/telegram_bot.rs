@@ -43,6 +43,7 @@ impl TelegramController {
     pub async fn start(self) -> Result<()> {
         info!("🤖 Starting Telegram bot...");
         
+        let bot = self.bot.clone();
         let handler = Update::filter_message().branch(
             dptree::filter(|msg: Message| {
                 msg.text().is_some() && msg.from().is_some()
@@ -56,7 +57,7 @@ impl TelegramController {
             }),
         );
 
-        Dispatcher::builder(self.bot.clone(), handler)
+        Dispatcher::builder(bot, handler)
             .enable_ctrlc_handler()
             .build()
             .dispatch()
