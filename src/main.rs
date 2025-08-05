@@ -14,6 +14,8 @@ mod strategy;
 mod notifier;
 mod swap;
 mod grpc_listener;
+mod profit_db;
+mod telegram_bot;
 
 #[derive(Deserialize, Clone)]
 pub struct Config {
@@ -22,6 +24,7 @@ pub struct Config {
     pub grpc_x_token: String,
     pub tg_token: String,
     pub tg_chat: String,
+    pub tg_authorized_users: Vec<String>,
     pub discord_webhook: String,
     pub discord_token: String,
     pub discord_channel_id: Vec<String>,
@@ -37,6 +40,26 @@ pub struct Config {
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let cfg: Config = toml::from_str(&std::fs::read_to_string("config.toml")?)?;
+    
+    // Initialize profit database
+    let profit_db = match profit_db::ProfitDatabase::new("profit_tracking.db") {
+        Ok(db) => {
+            info!("✅ Profit tracking database initialized");
+            db
+        }
+        Err(e) => {
+            tracing::error!("Failed to initialize profit database: {}", e);
+            return Err(anyhow!("Failed to initialize profit database: {}", e));
+        }
+    };
+    
+    // Initialize Telegram bot controller
+    let telegram_controller = telegram_bot::TelegramController::new(
+        cfg.tg_token.clone(),
+        profit_db.clone(),
+        cfg.tg_authorized_users.clone(),
+    );
+    
     crate::notifier::log("Test notification on startup".to_string()).await;
     let payer = Arc::new(read_keypair_file("keys/id.json")
         .map_err(|e| anyhow!("bad keypair file: {}", e))?);
@@ -75,6 +98,16 @@ async fn main() -> Result<()> {
     
     info!("Started Discord signal monitor");
     
+    // Start Telegram bot
+    let telegram_controller_clone = telegram_controller.clone();
+    let telegram_task = tokio::spawn(async move {
+        if let Err(e) = telegram_controller_clone.start().await {
+            tracing::error!("Telegram bot failed: {}", e);
+        }
+    });
+    
+    info!("Started Telegram bot controller");
+    
     let connected_clone = connected.clone();
     tokio::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_secs(10)).await;
@@ -93,6 +126,7 @@ async fn main() -> Result<()> {
     tokio::select! {
         _ = discord_task => info!("Discord listener ended"),
         _ = grpc_task => info!("gRPC listener ended"),
+        _ = telegram_task => info!("Telegram bot ended"),
         _ = balance_monitor => info!("Balance monitor ended"),
         _ = tokio::signal::ctrl_c() => info!("Received Ctrl+C, shutting down"),
     }

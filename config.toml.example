@@ -5,6 +5,7 @@ grpc_x_token = "YOUR_0SLOT_KEY"
 # Telegram & Discord
 tg_token   = "YOUR_TELEGRAM_BOT_TOKEN"
 tg_chat    = "@topsolsniper1_bot"
+tg_authorized_users = ["YOUR_TELEGRAM_USER_ID", "ANOTHER_USER_ID"]
 discord_webhook = "https://discord.com/api/webhooks/..."
 
 # Discord Bot for signal scraping
