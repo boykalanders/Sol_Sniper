@@ -1,15 +1,17 @@
 use rusqlite::{Connection, Result as SqliteResult};
-use std::path::Path;
-use tracing::{info, error};
+use tracing::info;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 pub struct ProfitDatabase {
-    conn: Connection,
+    conn: Arc<Mutex<Connection>>,
 }
 
 impl ProfitDatabase {
     /// Initialize the profit database
     pub fn new(db_path: &str) -> SqliteResult<Self> {
         let conn = Connection::open(db_path)?;
+        let conn = Arc::new(Mutex::new(conn));
         let db = ProfitDatabase { conn };
         db.init_table()?;
         Ok(db)
@@ -17,7 +19,8 @@ impl ProfitDatabase {
 
     /// Initialize the profit table if it doesn't exist
     fn init_table(&self) -> SqliteResult<()> {
-        self.conn.execute(
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "CREATE TABLE IF NOT EXISTS profit_tracking (
                 id INTEGER PRIMARY KEY,
                 total_profit REAL NOT NULL DEFAULT 0.0,
@@ -33,9 +36,9 @@ impl ProfitDatabase {
         )?;
 
         // Insert initial record if table is empty
-        let count: i32 = self.conn.query_row("SELECT COUNT(*) FROM profit_tracking", [], |row| row.get(0))?;
+        let count: i32 = conn.query_row("SELECT COUNT(*) FROM profit_tracking", [], |row| row.get(0))?;
         if count == 0 {
-            self.conn.execute(
+            conn.execute(
                 "INSERT INTO profit_tracking (total_profit, total_trades, winning_trades, losing_trades, largest_win, largest_loss) 
                  VALUES (0.0, 0, 0, 0, 0.0, 0.0)",
                 [],
@@ -48,7 +51,8 @@ impl ProfitDatabase {
 
     /// Get current profit statistics
     pub fn get_profit(&self) -> SqliteResult<ProfitStats> {
-        let row = self.conn.query_row(
+        let conn = self.conn.lock().unwrap();
+        let row = conn.query_row(
             "SELECT total_profit, total_trades, winning_trades, losing_trades, largest_win, largest_loss, updated_at 
              FROM profit_tracking ORDER BY id DESC LIMIT 1",
             [],
@@ -83,7 +87,8 @@ impl ProfitDatabase {
         let new_largest_win = if profit > stats.largest_win { profit } else { stats.largest_win };
         let new_largest_loss = if profit < stats.largest_loss { profit } else { stats.largest_loss };
 
-        self.conn.execute(
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "UPDATE profit_tracking SET 
                 total_profit = ?, 
                 total_trades = ?, 
@@ -108,7 +113,8 @@ impl ProfitDatabase {
 
     /// Reset all profit data to zero
     pub fn reset_profit(&self) -> SqliteResult<()> {
-        self.conn.execute(
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "UPDATE profit_tracking SET 
                 total_profit = 0.0, 
                 total_trades = 0, 
@@ -157,7 +163,15 @@ impl ProfitDatabase {
     }
 }
 
-#[derive(Debug)]
+impl Clone for ProfitDatabase {
+    fn clone(&self) -> Self {
+        Self {
+            conn: self.conn.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ProfitStats {
     pub total_profit: f64,
     pub total_trades: i32,

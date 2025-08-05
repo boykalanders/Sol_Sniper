@@ -1,12 +1,12 @@
 use teloxide::{
     prelude::*,
-    types::{Message, UpdateKind},
+    types::Message,
     Bot,
 };
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use crate::profit_db::ProfitDatabase;
-use tracing::{info, warn, error};
+use tracing::{info, error};
 use anyhow::Result;
 
 pub struct TelegramController {
@@ -51,6 +51,7 @@ impl TelegramController {
                 let controller = self.clone();
                 async move {
                     controller.handle_message(msg).await;
+                    Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
                 }
             }),
         );
