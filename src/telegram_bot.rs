@@ -170,7 +170,7 @@ Some commands require authorization.
                 }
                 
                 // Send notification
-                self.send_notification(response).await;
+                self.send_notification(&response).await;
             }
             Err(e) => {
                 let response = format!("❌ Error getting profit data: {}", e);
@@ -292,7 +292,7 @@ Some commands require authorization.
     /// Send notification to configured chat
     async fn send_notification(&self, message: &str) {
         if let Some(chat_id) = &self.notification_chat_id {
-            if let Err(e) = self.bot.send_message(chat_id, message).await {
+            if let Err(e) = self.bot.send_message(chat_id.to_string(), message).await {
                 error!("Failed to send notification: {}", e);
             } else {
                 info!("📢 Notification sent: {}", message);

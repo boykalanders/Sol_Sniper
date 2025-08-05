@@ -67,6 +67,7 @@ async fn main() -> Result<()> {
         cfg.tg_token.clone(),
         profit_db.clone(),
         cfg.tg_authorized_users.clone(),
+        Some(cfg.tg_chat.clone()),
     );
     
     crate::notifier::log("Test notification on startup".to_string()).await;
