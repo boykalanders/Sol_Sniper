@@ -34,14 +34,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let user_id = user.id;
                 let username = user.username.clone().unwrap_or_else(|| "No username".to_string());
                 let first_name = user.first_name.clone().unwrap_or_else(|| String::new());
-                let last_name = user.last_name.clone().unwrap_or_else(|| String::new());
                 
-                let full_name = if !first_name.is_empty() && !last_name.is_empty() {
-                    format!("{} {}", first_name, last_name)
-                } else if !first_name.is_empty() {
-                    first_name
-                } else if !last_name.is_empty() {
-                    last_name
+                let full_name = if !first_name.is_empty() {
+                    format!("{}", first_name)
                 } else {
                     "Unknown".to_string()
                 };
