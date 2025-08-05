@@ -74,16 +74,7 @@ impl TelegramController {
 
         info!("📱 Received message from {} ({}): {}", username, user_id, text);
 
-        // Check authorization
-        if !self.is_authorized(&user_id) {
-            let response = "❌ Unauthorized access. You are not authorized to use this bot.";
-            if let Err(e) = self.bot.send_message(msg.chat.id, response).await {
-                error!("Failed to send unauthorized message: {}", e);
-            }
-            return;
-        }
-
-        // Handle commands
+        // Handle commands with selective authorization
         match text.to_lowercase().trim() {
             "/start" | "/help" => {
                 self.send_help_message(msg.chat.id).await;
@@ -91,17 +82,41 @@ impl TelegramController {
             "/profit" | "profit" => {
                 self.send_profit_info(msg.chat.id).await;
             }
+            "/status" | "status" => {
+                self.send_status(msg.chat.id).await;
+            }
             "/reset" | "reset" => {
+                // Check authorization for reset command
+                if !self.is_authorized(&user_id) {
+                    let response = "❌ Unauthorized access. Only authorized users can reset profit data.";
+                    if let Err(e) = self.bot.send_message(msg.chat.id, response).await {
+                        error!("Failed to send unauthorized message: {}", e);
+                    }
+                    return;
+                }
                 self.reset_profit(msg.chat.id).await;
             }
             "/stop" | "stop" => {
+                // Check authorization for stop command
+                if !self.is_authorized(&user_id) {
+                    let response = "❌ Unauthorized access. Only authorized users can stop the bot.";
+                    if let Err(e) = self.bot.send_message(msg.chat.id, response).await {
+                        error!("Failed to send unauthorized message: {}", e);
+                    }
+                    return;
+                }
                 self.stop_bot(msg.chat.id).await;
             }
             "/start_bot" | "start_bot" => {
+                // Check authorization for start_bot command
+                if !self.is_authorized(&user_id) {
+                    let response = "❌ Unauthorized access. Only authorized users can start the bot.";
+                    if let Err(e) = self.bot.send_message(msg.chat.id, response).await {
+                        error!("Failed to send unauthorized message: {}", e);
+                    }
+                    return;
+                }
                 self.start_bot(msg.chat.id).await;
-            }
-            "/status" | "status" => {
-                self.send_status(msg.chat.id).await;
             }
             _ => {
                 let response = "❓ Unknown command. Use /help to see available commands.";
@@ -118,16 +133,21 @@ impl TelegramController {
 🤖 **Sniper Bot Control Panel**
 
 **Available Commands:**
+
+**Public Commands (Anyone can use):**
+• `/start` - Start the bot interface
+• `/help` - Show this help message
+• `/status` - Show bot status
 • `/profit` - Show current profit statistics
+
+**Authorized Commands (Admin only):**
 • `/reset` - Reset all profit data to zero
 • `/stop` - Stop the bot (pause trading)
 • `/start_bot` - Start the bot (resume trading)
-• `/status` - Show bot status
-• `/help` - Show this help message
 
 **Usage:**
-Send any of these commands to control the bot.
-Only authorized users can use these commands.
+Send any of these commands to interact with the bot.
+Some commands require authorization.
         "#;
 
         if let Err(e) = self.bot.send_message(chat_id, help_text).await {
