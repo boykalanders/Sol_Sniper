@@ -33,26 +33,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let user = msg.from().unwrap();
                 let user_id = user.id;
                 let username = user.username.clone().unwrap_or_else(|| "No username".to_string());
-                let first_name = user.first_name.clone().unwrap_or_else(|| String::new());
                 
-                let full_name = if !first_name.is_empty() {
-                    format!("{}", first_name)
-                } else {
-                    "Unknown".to_string()
-                };
-
                 let response = format!(
                     "👤 **Your Telegram Information**\n\n\
                     **User ID:** `{}`\n\
                     **Username:** @{}\n\
-                    **Full Name:** {}\n\n\
                     **To authorize this user:**\n\
                     Add `\"{}\"` to the `tg_authorized_users` array in your `config.toml`\n\n\
                     **Example:**\n\
                     ```toml\n\
                     tg_authorized_users = [\"{}\"]\n\
                     ```",
-                    user_id, username, full_name, user_id, user_id
+                    user_id, username, user_id, user_id
                 );
 
                 if let Err(e) = bot.send_message(msg.chat.id, response).await {
