@@ -47,7 +47,7 @@ impl TelegramController {
             dptree::filter(|msg: Message| {
                 msg.text().is_some() && msg.from().is_some()
             })
-            .endpoint(|msg: Message| {
+            .endpoint(move |msg: Message| {
                 let controller = self.clone();
                 async move {
                     controller.handle_message(msg).await;
