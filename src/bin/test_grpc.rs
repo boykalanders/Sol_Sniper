@@ -4,6 +4,7 @@ use serde::Deserialize;
 use tracing::{info};
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::prelude::{SubscribeRequest, SubscribeRequestFilterTransactions};
+use toml;
 
 #[derive(Deserialize)]
 struct Config {
