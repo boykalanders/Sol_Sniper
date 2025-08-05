@@ -108,7 +108,7 @@ impl ProfitDatabase {
     }
 
     /// Reset profit tracking
-    fn reset_profit(&self) -> SqliteResult<()> {
+    fn _reset_profit(&self) -> SqliteResult<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
             "UPDATE profit_tracking SET 
