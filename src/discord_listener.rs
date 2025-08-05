@@ -12,7 +12,7 @@ use tokio::time::{interval, Interval};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use std::time::Duration;
 use solana_sdk::signer::keypair::Keypair;
-use crate::{Config, get_sol_balance};
+use crate::Config;
 
 pub async fn run(config: Config, payer: Arc<Keypair>, connected: Arc<AtomicBool>) -> Result<()> {
     loop {
