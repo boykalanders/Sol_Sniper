@@ -108,17 +108,6 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
                         let username = user_info["username"].as_str().unwrap_or("Unknown");
                         let user_id = user_info["id"].as_str().unwrap_or("Unknown");
                         info!("🎯 Discord Gateway READY - Logged in as: {} ({})", username, user_id);
-                        
-                        // Log which guilds we can see
-                        if let Some(guilds) = event["d"]["guilds"].as_array() {
-                            info!("📡 Connected to {} guilds", guilds.len());
-                            for guild in guilds.iter().take(5) { // Show first 5
-                                let guild_id = guild["id"].as_str().unwrap_or("Unknown");
-                                let guild_name = guild["name"].as_str().unwrap_or("Unknown");
-                                info!("  📍 Guild: {} ({})", guild_name, guild_id);
-                            }
-                        }
-                        
                         info!("🎯 Target channels to monitor: {:?}", channel_ids);
                     } else if event_type == "MESSAGE_CREATE" {
                         let message = &event["d"];
