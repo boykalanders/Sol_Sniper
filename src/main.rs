@@ -134,7 +134,6 @@ async fn main() -> Result<()> {
     // Wait for either to finish or Ctrl+C
     tokio::select! {
         _ = discord_task => info!("Discord listener ended"),
-        // _ = grpc_task => info!("gRPC listener ended"),
         _ = telegram_task => info!("Telegram bot ended"),
         _ = balance_monitor => info!("Balance monitor ended"),
         _ = tokio::signal::ctrl_c() => info!("Received Ctrl+C, shutting down"),
