@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         dptree::filter(|msg: Message| {
             msg.text().is_some() && msg.from().is_some()
         })
-        .endpoint(|msg: Message| {
+        .endpoint(move |msg: Message| {
             let bot = bot.clone();
             async move {
                 let user = msg.from().unwrap();
