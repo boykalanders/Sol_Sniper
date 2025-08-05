@@ -6,9 +6,10 @@ use base64::{self, engine::general_purpose};
 use base64::Engine;
 use bincode;
 use std::str::FromStr;
+use crate::Config;
 
 pub async fn get_swap_transaction(
-    cfg: &crate::Config,
+    cfg: &Config,
     payer: &Pubkey,
     input_mint: Pubkey,
     output_mint: Pubkey,

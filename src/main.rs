@@ -1,11 +1,10 @@
 use anyhow::{anyhow, Result};
-use serde::Deserialize;
-use solana_sdk::{signature::read_keypair_file, pubkey::Pubkey, signer::keypair::Keypair};
+use solana_sdk::{signature::read_keypair_file, signer::keypair::Keypair};
 use solana_sdk::signer::Signer;
-use solana_client::nonblocking::rpc_client::RpcClient;
 use std::sync::Arc;
 use tracing::info;
 use std::sync::atomic::{AtomicBool, Ordering};
+use crate::{Config, get_sol_balance};
 
 mod discord_listener;
 mod buy;
@@ -50,7 +49,7 @@ async fn main() -> Result<()> {
     info!("💵 Trading with {} SOL per signal", cfg.amount_sol);
     
     // Check current SOL balance
-    match crate::get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
+    match get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
         Ok(balance) => {
             info!("💰 Current SOL Balance: {:.4} SOL", balance);
             let trades_possible = (balance / cfg.amount_sol).floor() as u32;
@@ -116,14 +115,14 @@ async fn main() -> Result<()> {
 
 
 /// Periodic balance monitor - logs balance every 5 minutes
-async fn periodic_balance_monitor(cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
+async fn periodic_balance_monitor(cfg: Config, payer: Arc<Keypair>) -> Result<()> {
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(300)); // 5 minutes
     let mut last_balance = 0.0;
     
     loop {
         interval.tick().await;
         
-        match crate::get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
+        match get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
             Ok(current_balance) => {
                 let balance_change = current_balance - last_balance;
                 

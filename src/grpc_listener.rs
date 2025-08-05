@@ -10,8 +10,9 @@ use {
         SubscribeRequest, SubscribeRequestFilterTransactions,
     },
 };
+use crate::Config;
 
-pub async fn run(cfg: crate::Config, _payer: Pubkey) -> Result<()> {
+pub async fn run(cfg: Config, _payer: Pubkey) -> Result<()> {
     // 1. Build a plain HTTP/2 channel (no TLS, no x-token)
     let mut client = GeyserGrpcClient::build_from_shared(cfg.grpc_addr.clone())?
         .connect_timeout(Duration::from_secs(10))

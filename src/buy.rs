@@ -4,13 +4,14 @@ use solana_sdk::{pubkey::Pubkey /*, transaction::VersionedTransaction */};
 use std::str::FromStr;
 use std::sync::Arc;
 use solana_sdk::{signer::keypair::Keypair, signer::Signer};
+use crate::{Config, get_sol_balance};
 
-pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
+pub async fn execute(mint: Pubkey, cfg: Config, payer: Arc<Keypair>) -> Result<()> {
     let rpc = RpcClient::new(cfg.rpc_http.clone());
     tracing::info!("🎯 Signal received: attempting to buy {} with {} SOL", mint, cfg.amount_sol);
     
     // Check current balance before trade
-    match crate::get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
+    match get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
         Ok(balance) => {
             tracing::info!("💰 Current balance before trade: {:.4} SOL", balance);
             if balance < cfg.amount_sol {
@@ -76,10 +77,10 @@ pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> R
             tracing::info!("✅ Successfully bought {}, signature: {}", mint, signature);
             
             // Check balance after successful trade
-            match crate::get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
+            match get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
                 Ok(new_balance) => {
                     tracing::info!("💰 Balance after trade: {:.4} SOL", new_balance);
-                    let spent_amount = cfg.amount_sol; // Approximate, actual might vary due to fees
+                    let _spent_amount = cfg.amount_sol; // Approximate, actual might vary due to fees
                     crate::notifier::log(format!("🟢 BOUGHT {} | TX: {} | Balance: {:.4} SOL", mint, signature, new_balance)).await;
                 }
                 Err(e) => {

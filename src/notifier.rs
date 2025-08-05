@@ -1,7 +1,8 @@
 use anyhow::Result;
+use crate::Config;
 
 pub async fn log(msg: String) {
-    let cfg: crate::Config = toml::from_str(
+    let cfg: Config = toml::from_str(
         &std::fs::read_to_string("config.toml").unwrap()
     ).unwrap();
     let (tg_res, disc_res) = tokio::join!(

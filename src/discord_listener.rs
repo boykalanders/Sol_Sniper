@@ -12,8 +12,9 @@ use tokio::time::{interval, Interval};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use std::time::Duration;
 use solana_sdk::signer::keypair::Keypair;
+use crate::{Config, get_sol_balance};
 
-pub async fn run(config: crate::Config, payer: Arc<Keypair>, connected: Arc<AtomicBool>) -> Result<()> {
+pub async fn run(config: Config, payer: Arc<Keypair>, connected: Arc<AtomicBool>) -> Result<()> {
     loop {
         match connect_and_listen(&config, payer.clone(), &connected).await {
             Ok(_) => break,
@@ -26,7 +27,7 @@ pub async fn run(config: crate::Config, payer: Arc<Keypair>, connected: Arc<Atom
     Ok(())
 }
 
-async fn connect_and_listen(config: &crate::Config, payer: Arc<Keypair>, connected: &Arc<AtomicBool>) -> Result<()> {
+async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Arc<AtomicBool>) -> Result<()> {
     let (ws_stream, _) = connect_async("wss://gateway.discord.gg/?v=10&encoding=json")
         .await
         .context("Failed to connect to Discord Gateway")?;

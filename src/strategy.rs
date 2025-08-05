@@ -12,6 +12,7 @@ use tokio::time::timeout;
 use tracing::{error, info};
 use bincode;
 use serde::Deserialize;
+use crate::Config;
 
 #[derive(Deserialize, Debug)]
 struct BondingCurve {
@@ -20,7 +21,7 @@ struct BondingCurve {
     // Other fields as needed
 }
 
-pub async fn manage(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
+pub async fn manage(mint: Pubkey, cfg: Config, payer: Arc<Keypair>) -> Result<()> {
     let bonk_program: Pubkey = "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj".parse()?;
     let (bonding_curve, _) = Pubkey::find_program_address(&[b"bonding-curve", mint.as_ref()], &bonk_program);
     let stop_loss_multiplier = 1.0 - (cfg.stop_loss_pct as f64 / 100.0);

@@ -4,8 +4,9 @@ use solana_sdk::{pubkey::Pubkey /*, transaction::VersionedTransaction */};
 use std::str::FromStr;
 use std::sync::Arc;
 use solana_sdk::{signer::keypair::Keypair, signer::Signer};
+use crate::{Config, get_sol_balance};
 
-pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> Result<()> {
+pub async fn execute(mint: Pubkey, cfg: Config, payer: Arc<Keypair>) -> Result<()> {
     let rpc = RpcClient::new(cfg.rpc_http.clone());
     tracing::info!("Selling {}", mint);
 
@@ -41,7 +42,7 @@ pub async fn execute(mint: Pubkey, cfg: crate::Config, payer: Arc<Keypair>) -> R
     let signature = rpc.send_and_confirm_transaction(&tx).await?;
     
     // Check balance after successful sale
-    match crate::get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
+    match get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
         Ok(new_balance) => {
             tracing::info!("💰 Balance after selling {}: {:.4} SOL", mint, new_balance);
             crate::notifier::log(format!("🔴 SOLD {} | TX: {} | Balance: {:.4} SOL", mint, signature, new_balance)).await;
