@@ -14,6 +14,7 @@ pub struct TelegramController {
     profit_db: Arc<Mutex<ProfitDatabase>>,
     authorized_users: Vec<String>,
     is_running: Arc<Mutex<bool>>,
+    notification_chat_id: Option<String>,
 }
 
 impl TelegramController {
@@ -21,6 +22,7 @@ impl TelegramController {
         bot_token: String,
         profit_db: ProfitDatabase,
         authorized_users: Vec<String>,
+        notification_chat_id: Option<String>,
     ) -> Self {
         let bot = Bot::new(bot_token);
         let profit_db = Arc::new(Mutex::new(profit_db));
@@ -31,6 +33,7 @@ impl TelegramController {
             profit_db,
             authorized_users,
             is_running,
+            notification_chat_id,
         }
     }
 
@@ -159,17 +162,59 @@ Some commands require authorization.
     async fn send_profit_info(&self, chat_id: ChatId) {
         let profit_db = self.profit_db.lock().await;
         
-        match profit_db.get_profit_summary() {
-            Ok(summary) => {
-                let response = format!("📊 **Profit Statistics**\n\n{}", summary);
+        // Get detailed profit information
+        match profit_db.get_profit() {
+            Ok(stats) => {
+                let response = format!(
+                    "💰 **Detailed Profit Report**\n\n\
+                    **📈 Total Performance:**\n\
+                    • Total Profit: {:.4} SOL\n\
+                    • Total Trades: {}\n\
+                    • Win Rate: {:.1}%\n\
+                    • Average Profit per Trade: {:.4} SOL\n\n\
+                    **📊 Trading Statistics:**\n\
+                    • Winning Trades: {}\n\
+                    • Losing Trades: {}\n\
+                    • Break-even Trades: {}\n\n\
+                    **⏰ Last Updated:** {}\n\n\
+                    **📋 Summary:**\n\
+                    {}",
+                    stats.total_profit,
+                    stats.total_trades,
+                    stats.win_rate(),
+                    if stats.total_trades > 0 { stats.total_profit / stats.total_trades as f64 } else { 0.0 },
+                    stats.winning_trades,
+                    stats.losing_trades,
+                    stats.total_trades - stats.winning_trades - stats.losing_trades,
+                    stats.updated_at,
+                    profit_db.get_profit_summary().unwrap_or_else(|_| "Unable to get summary".to_string())
+                );
+                
                 if let Err(e) = self.bot.send_message(chat_id, response).await {
                     error!("Failed to send profit info: {}", e);
                 }
+                
+                // Send notification
+                self.send_notification("📊 Detailed profit info requested").await;
             }
             Err(e) => {
-                let response = format!("❌ Error getting profit data: {}", e);
-                if let Err(e) = self.bot.send_message(chat_id, response).await {
-                    error!("Failed to send error message: {}", e);
+                // Fallback to summary if detailed info fails
+                match profit_db.get_profit_summary() {
+                    Ok(summary) => {
+                        let response = format!("📊 **Profit Statistics**\n\n{}", summary);
+                        if let Err(e) = self.bot.send_message(chat_id, response).await {
+                            error!("Failed to send profit info: {}", e);
+                        }
+                        
+                        // Send notification
+                        self.send_notification("📊 Profit info requested").await;
+                    }
+                    Err(_) => {
+                        let response = format!("❌ Error getting profit data: {}", e);
+                        if let Err(e) = self.bot.send_message(chat_id, response).await {
+                            error!("Failed to send error message: {}", e);
+                        }
+                    }
                 }
             }
         }
@@ -186,6 +231,9 @@ Some commands require authorization.
                     error!("Failed to send reset confirmation: {}", e);
                 }
                 info!("💰 Profit data reset via Telegram command");
+                
+                // Send notification
+                self.send_notification("🔄 Profit data reset executed").await;
             }
             Err(e) => {
                 let response = format!("❌ Error resetting profit data: {}", e);
@@ -207,6 +255,9 @@ Some commands require authorization.
         }
         
         info!("🛑 Bot stopped via Telegram command");
+        
+        // Send notification
+        self.send_notification("🛑 Bot stopped via Telegram command").await;
     }
 
     /// Start the bot
@@ -220,6 +271,9 @@ Some commands require authorization.
         }
         
         info!("✅ Bot started via Telegram command");
+        
+        // Send notification
+        self.send_notification("✅ Bot started via Telegram command").await;
     }
 
     /// Send bot status
@@ -248,6 +302,9 @@ Some commands require authorization.
                 if let Err(e) = self.bot.send_message(chat_id, response).await {
                     error!("Failed to send status: {}", e);
                 }
+                
+                // Send notification
+                self.send_notification("📊 Bot status requested").await;
             }
             Err(e) => {
                 let response = format!("❌ Error getting status: {}", e);
@@ -270,6 +327,17 @@ Some commands require authorization.
     pub fn get_profit_db(&self) -> Arc<Mutex<ProfitDatabase>> {
         self.profit_db.clone()
     }
+
+    /// Send notification to configured chat
+    async fn send_notification(&self, message: &str) {
+        if let Some(chat_id) = &self.notification_chat_id {
+            if let Err(e) = self.bot.send_message(chat_id, message).await {
+                error!("Failed to send notification: {}", e);
+            } else {
+                info!("📢 Notification sent: {}", message);
+            }
+        }
+    }
 }
 
 impl Clone for TelegramController {
@@ -279,6 +347,7 @@ impl Clone for TelegramController {
             profit_db: self.profit_db.clone(),
             authorized_users: self.authorized_users.clone(),
             is_running: self.is_running.clone(),
+            notification_chat_id: self.notification_chat_id.clone(),
         }
     }
 }
