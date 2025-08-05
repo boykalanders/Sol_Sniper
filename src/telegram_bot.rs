@@ -165,7 +165,7 @@ Some commands require authorization.
         match profit_db.get_profit_summary() {
             Ok(summary) => {
                 let response = format!("📊 **Profit Statistics**\n\n{}", summary);
-                if let Err(e) = self.bot.send_message(chat_id, response).await {
+                if let Err(e) = self.bot.send_message(chat_id, &response).await {
                     error!("Failed to send profit info: {}", e);
                 }
                 
