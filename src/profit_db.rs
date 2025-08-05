@@ -72,12 +72,14 @@ impl ProfitDatabase {
     }
 
     /// Get profit as a simple f64 value (for backward compatibility)
+    #[allow(dead_code)]
     pub fn get_profit_value(&self) -> SqliteResult<f64> {
         let stats = self.get_profit()?;
         Ok(stats.total_profit)
     }
 
     /// Add profit from a trade
+    #[allow(dead_code)]
     pub fn add_profit(&self, profit: f64) -> SqliteResult<()> {
         let stats = self.get_profit()?;
         let new_total_profit = stats.total_profit + profit;
@@ -184,11 +186,13 @@ pub struct ProfitStats {
 
 impl ProfitStats {
     /// Get formatted profit string
+    #[allow(dead_code)]
     pub fn formatted_profit(&self) -> String {
         format!("{:.4} SOL", self.total_profit)
     }
 
     /// Check if profit is positive
+    #[allow(dead_code)]
     pub fn is_profitable(&self) -> bool {
         self.total_profit > 0.0
     }

@@ -239,12 +239,14 @@ Only authorized users can use these commands.
     }
 
     /// Check if bot is running
+    #[allow(dead_code)]
     pub async fn is_bot_running(&self) -> bool {
         let is_running = self.is_running.lock().await;
         *is_running
     }
 
     /// Get profit database reference
+    #[allow(dead_code)]
     pub fn get_profit_db(&self) -> Arc<Mutex<ProfitDatabase>> {
         self.profit_db.clone()
     }
@@ -262,6 +264,7 @@ impl Clone for TelegramController {
 }
 
 /// Send notification to Telegram
+#[allow(dead_code)]
 pub async fn send_telegram_notification(
     bot_token: &str,
     chat_id: &str,
