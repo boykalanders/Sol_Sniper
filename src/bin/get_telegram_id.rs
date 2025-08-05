@@ -18,6 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
 
     let bot = Bot::new(bot_token);
+    let bot_clone = bot.clone();
     
     println!("🤖 Starting Telegram ID helper bot...");
     println!("Send any message to this bot to get your user ID");
@@ -28,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             msg.text().is_some() && msg.from().is_some()
         })
         .endpoint(move |msg: Message| {
-            let bot = bot.clone();
+            let bot = bot_clone.clone();
             async move {
                 let user = msg.from().unwrap();
                 let user_id = user.id;

@@ -282,7 +282,3 @@ async fn validate_token_on_chain(pubkey: &Pubkey) -> Result<bool, Box<dyn std::e
 }
 */
 
-#[derive(Debug, Clone)]
-pub struct TradingSignal {
-    pub token_address: Pubkey,
-}
