@@ -1,10 +1,8 @@
 use teloxide::{
     prelude::*,
-    types::{Message, UpdateKind},
+    types::Message,
     Bot,
 };
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -35,19 +33,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let user = msg.from().unwrap();
                 let user_id = user.id;
                 let username = user.username.clone().unwrap_or_else(|| "No username".to_string());
-                let first_name = user.first_name.clone();
-                let last_name = user.last_name.clone();
+                let first_name = user.first_name.clone().unwrap_or_default();
+                let last_name = user.last_name.clone().unwrap_or_default();
                 
-                let full_name = match (first_name, last_name) {
-                    (Some(first), Some(last)) => format!("{} {}", first, last),
-                    (Some(first), None) => first,
-                    (None, Some(last)) => last,
-                    (None, None) => "Unknown".to_string(),
+                let full_name = if !first_name.is_empty() && !last_name.is_empty() {
+                    format!("{} {}", first_name, last_name)
+                } else if !first_name.is_empty() {
+                    first_name
+                } else if !last_name.is_empty() {
+                    last_name
+                } else {
+                    "Unknown".to_string()
                 };
 
                 let response = format!(
                     "👤 **Your Telegram Information**\n\n\
-                    **User ID:** `{}\`\n\
+                    **User ID:** `{}`\n\
                     **Username:** @{}\n\
                     **Full Name:** {}\n\n\
                     **To authorize this user:**\n\
@@ -62,6 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Err(e) = bot.send_message(msg.chat.id, response).await {
                     eprintln!("Failed to send message: {}", e);
                 }
+                Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
             }
         }),
     );

@@ -40,7 +40,7 @@ impl TelegramController {
     }
 
     /// Start the Telegram bot
-    pub async fn start(&self) -> Result<()> {
+    pub async fn start(self) -> Result<()> {
         info!("🤖 Starting Telegram bot...");
         
         let handler = Update::filter_message().branch(

@@ -1,4 +1,4 @@
-use crate::profit_db::ProfitDatabase;
+use snipe::profit_db::ProfitDatabase;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

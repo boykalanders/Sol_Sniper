@@ -99,9 +99,8 @@ async fn main() -> Result<()> {
     info!("Started Discord signal monitor");
     
     // Start Telegram bot
-    let telegram_controller_clone = telegram_controller.clone();
     let telegram_task = tokio::spawn(async move {
-        if let Err(e) = telegram_controller_clone.start().await {
+        if let Err(e) = telegram_controller.start().await {
             tracing::error!("Telegram bot failed: {}", e);
         }
     });
