@@ -126,7 +126,7 @@ async fn main() -> Result<()> {
         }
     });
 
-    let grpc_task = tokio::spawn(grpc_listener::run(cfg.clone(), payer.pubkey()));
+    // let grpc_task = tokio::spawn(grpc_listener::run(cfg.clone(), payer.pubkey()));
 
     // Start periodic balance monitor (every 5 minutes)
     let balance_monitor = tokio::spawn(periodic_balance_monitor(cfg.clone(), payer.clone()));
@@ -134,7 +134,7 @@ async fn main() -> Result<()> {
     // Wait for either to finish or Ctrl+C
     tokio::select! {
         _ = discord_task => info!("Discord listener ended"),
-        _ = grpc_task => info!("gRPC listener ended"),
+        // _ = grpc_task => info!("gRPC listener ended"),
         _ = telegram_task => info!("Telegram bot ended"),
         _ = balance_monitor => info!("Balance monitor ended"),
         _ = tokio::signal::ctrl_c() => info!("Received Ctrl+C, shutting down"),

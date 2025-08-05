@@ -51,7 +51,7 @@ pub async fn run(cfg: Config, _payer: Pubkey) -> Result<()> {
         match timeout(Duration::from_secs(30), stream.try_next()).await {
             Ok(Ok(Some(_update))) => {
                 // Custom logic can be added here for other gRPC interactions
-                // info!("Received gRPC update: {:?}", update);
+                info!("Received gRPC update: {:?}", _update);
             }
             Ok(Ok(None)) => {
                 error!("Server closed stream");
