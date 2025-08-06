@@ -120,9 +120,10 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
                             continue; // Silently ignore non-target channels
                         }
                         
-                        tracing::debug!("📨 Message from target channel {}: {} - '{}'", channel_id, author_name, content);
+                        info!("📨 Message from target channel {}: {} - '{}'", channel_id, author_name, content);
                         
                         if message["author"]["bot"].as_bool().unwrap_or(false) {
+                            info!("🤖 Skipping bot message from: {}", author_name);
                             continue; // Silently ignore bot messages
                         }
                         if let Some(token_address) = parse_trading_signal(content).await {
@@ -179,33 +180,55 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
 
 async fn parse_trading_signal(content: &str) -> Option<Pubkey> {
     let content = content.to_lowercase();
+    
+    // First, check if message contains "CA" (Contract Address)
     let signal_patterns = [r"(?i)\b(CA)\b"];
     let has_signal = signal_patterns.iter().any(|pattern| {
         Regex::new(pattern).unwrap().is_match(&content)
     });
+    
     if !has_signal {
         return None;
     }
+    
+    info!("🔍 Signal detected in message: '{}'", content);
+    
+    // Improved token patterns to match various formats
     let token_patterns = [
-        r"([A-Za-z0-9]{32,44})\b",
-        r"(?i)(?:address|contract|token|ca)[:=\s]+([A-Za-z0-9]{32,44})",
-        r"(?i)(?:token|contract|address)\s*[:=]?\s*([A-Za-z0-9]{32,44})",
+        // Pattern 1: CA: <address> (your format)
+        r"(?i)ca\s*:\s*([A-Za-z0-9]{32,44})",
+        // Pattern 2: CA=<address>
+        r"(?i)ca\s*=\s*([A-Za-z0-9]{32,44})",
+        // Pattern 3: Just the address after CA
+        r"(?i)ca\s+([A-Za-z0-9]{32,44})",
+        // Pattern 4: Any 32-44 character alphanumeric string (fallback)
+        r"([A-Za-z0-9]{32,44})",
     ];
-    for pattern in &token_patterns {
+    
+    for (i, pattern) in token_patterns.iter().enumerate() {
         if let Ok(re) = Regex::new(pattern) {
             for cap in re.captures_iter(&content) {
                 if let Some(addr_match) = cap.get(1) {
                     let addr_str = addr_match.as_str();
+                    info!("🔍 Pattern {} matched address: {}", i + 1, addr_str);
+                    
                     if let Ok(pubkey) = Pubkey::from_str(addr_str) {
+                        info!("✅ Valid pubkey format: {}", pubkey);
                         if is_likely_token_address(&pubkey).await {
+                            info!("✅ Token address validated: {}", pubkey);
                             return Some(pubkey);
+                        } else {
+                            info!("❌ Token address validation failed: {}", pubkey);
                         }
+                    } else {
+                        info!("❌ Invalid pubkey format: {}", addr_str);
                     }
                 }
             }
         }
     }
-    info!("Signal detected but no valid token address found in: {}", content);
+    
+    info!("❌ Signal detected but no valid token address found in: '{}'", content);
     None
 }
 

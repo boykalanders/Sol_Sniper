@@ -74,7 +74,7 @@ impl TelegramController {
         
         Ok(())
     }
-    
+
     /// Try to start the Telegram bot once with error handling
     async fn try_start_once(&mut self) -> Result<()> {
         let bot = self.bot.clone();

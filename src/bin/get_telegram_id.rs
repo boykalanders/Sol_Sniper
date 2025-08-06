@@ -10,7 +10,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
     
     // Get bot token from environment or config
-    let bot_token = std::env::var("TELEGRAM_BOT_TOKEN")
+    let bot_token = std::env::var("tg_token")
         .unwrap_or_else(|_| {
             println!("Please set TELEGRAM_BOT_TOKEN environment variable");
             println!("Or modify this script to read from config.toml");
