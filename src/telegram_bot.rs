@@ -43,14 +43,14 @@ impl TelegramController {
     }
 
     /// Start the Telegram bot
-    pub async fn start(self) -> Result<()> {
+    pub async fn start(mut self) -> Result<()> {
         info!("🤖 Starting Telegram bot...");
         
         let mut retry_count = 0;
         let max_retries = 5;
         
         loop {
-            match self.try_start().await {
+            match self.try_start_once().await {
                 Ok(_) => {
                     info!("🤖 Telegram bot started successfully");
                     break;
@@ -75,8 +75,8 @@ impl TelegramController {
         Ok(())
     }
     
-    /// Try to start the Telegram bot with error handling
-    async fn try_start(self) -> Result<()> {
+    /// Try to start the Telegram bot once with error handling
+    async fn try_start_once(&mut self) -> Result<()> {
         let bot = self.bot.clone();
         let handler = Update::filter_message().branch(
             dptree::filter(|msg: Message| {
@@ -102,14 +102,17 @@ impl TelegramController {
             dispatcher.dispatch()
         ).await {
             Ok(result) => {
-                if let Err(e) = result {
-                    if e.to_string().contains("TerminatedByOtherGetUpdates") {
-                        error!("🤖 Another bot instance is running with the same token");
-                        return Err(anyhow::anyhow!("Bot token already in use by another instance"));
+                match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        if e.to_string().contains("TerminatedByOtherGetUpdates") {
+                            error!("🤖 Another bot instance is running with the same token");
+                            Err(anyhow::anyhow!("Bot token already in use by another instance"))
+                        } else {
+                            Err(anyhow::anyhow!("Telegram bot error: {}", e))
+                        }
                     }
-                    return Err(anyhow::anyhow!("Telegram bot error: {}", e));
                 }
-                Ok(())
             }
             Err(_) => {
                 error!("🤖 Telegram bot startup timeout");

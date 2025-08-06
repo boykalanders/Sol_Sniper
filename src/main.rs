@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
     info!("💵 Trading with {} SOL per signal", cfg.amount_sol);
     
     // Check current SOL balance
-    let balance = match get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
+    let _balance = match get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
         Ok(balance) => {
             info!("💰 Current SOL Balance: {:.4} SOL", balance);
             let trades_possible = (balance / cfg.amount_sol).floor() as u32;
