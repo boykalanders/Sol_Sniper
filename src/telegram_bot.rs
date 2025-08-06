@@ -78,12 +78,14 @@ impl TelegramController {
     /// Try to start the Telegram bot once with error handling
     async fn try_start_once(&mut self) -> Result<()> {
         let bot = self.bot.clone();
+        let controller = self.clone();
+        
         let handler = Update::filter_message().branch(
             dptree::filter(|msg: Message| {
                 msg.text().is_some() && msg.from().is_some()
             })
             .endpoint(move |msg: Message| {
-                let controller = self.clone();
+                let controller = controller.clone();
                 async move {
                     controller.handle_message(msg).await;
                     Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
@@ -92,7 +94,7 @@ impl TelegramController {
         );
 
         // Build the dispatcher with error handling
-        let dispatcher = Dispatcher::builder(bot, handler)
+        let mut dispatcher = Dispatcher::builder(bot, handler)
             .enable_ctrlc_handler()
             .build();
 
