@@ -91,34 +91,18 @@ impl TelegramController {
             }),
         );
 
-        // Add error handling for TerminatedByOtherGetUpdates
+        // Build the dispatcher with error handling
         let dispatcher = Dispatcher::builder(bot, handler)
             .enable_ctrlc_handler()
             .build();
 
-        // Use a timeout to prevent hanging
-        match tokio::time::timeout(
-            std::time::Duration::from_secs(30),
-            dispatcher.dispatch()
-        ).await {
-            Ok(result) => {
-                match result {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        if e.to_string().contains("TerminatedByOtherGetUpdates") {
-                            error!("🤖 Another bot instance is running with the same token");
-                            Err(anyhow::anyhow!("Bot token already in use by another instance"))
-                        } else {
-                            Err(anyhow::anyhow!("Telegram bot error: {}", e))
-                        }
-                    }
-                }
-            }
-            Err(_) => {
-                error!("🤖 Telegram bot startup timeout");
-                Err(anyhow::anyhow!("Telegram bot startup timeout"))
-            }
-        }
+        // Start the dispatcher - it will run until an error occurs
+        // We'll catch the TerminatedByOtherGetUpdates error in the main loop
+        dispatcher.dispatch().await;
+        
+        // If we reach here, the dispatcher has stopped
+        // This usually means an error occurred
+        Err(anyhow::anyhow!("Telegram bot dispatcher stopped unexpectedly"))
     }
 
     /// Handle incoming messages
