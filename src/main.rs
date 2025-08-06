@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
     info!("💵 Trading with {} SOL per signal", cfg.amount_sol);
     
     // Check current SOL balance
-    match get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
+    let balance = match get_sol_balance(&cfg.rpc_http, &payer.pubkey()).await {
         Ok(balance) => {
             info!("💰 Current SOL Balance: {:.4} SOL", balance);
             let trades_possible = (balance / cfg.amount_sol).floor() as u32;
@@ -89,6 +89,16 @@ async fn main() -> Result<()> {
                 let msg = format!("⚠️ WARNING: Balance ({:.4} SOL) is less than trade amount ({} SOL)", balance, cfg.amount_sol);
                 tracing::warn!("{}", msg);
                 crate::notifier::log(msg).await;
+                
+                // Ask user if they want to continue anyway
+                tracing::warn!("💡 To fund your wallet, send SOL to: {}", payer.pubkey());
+                tracing::warn!("💡 You can also reduce the trade amount in config.toml (amount_sol = {})", cfg.amount_sol);
+                
+                // For now, continue but warn heavily
+                if balance == 0.0 {
+                    tracing::error!("❌ CRITICAL: Wallet has 0 SOL - bot will not be able to trade!");
+                    tracing::error!("💡 Please fund your wallet with at least {} SOL to enable trading", cfg.amount_sol);
+                }
             } else if balance < cfg.amount_sol * 3.0 {
                 let msg = format!("💛 Low balance warning: Only {:.4} SOL remaining ({}x trades possible)", balance, trades_possible);
                 tracing::warn!("{}", msg);
@@ -96,12 +106,14 @@ async fn main() -> Result<()> {
             }
             
             crate::notifier::log(format!("💰 Bot started | Wallet: {} | Balance: {:.4} SOL", payer.pubkey(), balance)).await;
+            balance
         }
         Err(e) => {
             tracing::warn!("Failed to get SOL balance: {}", e);
             crate::notifier::log(format!("💰 Bot started with wallet: {} (balance check failed)", payer.pubkey())).await;
+            0.0 // Assume 0 balance if we can't check
         }
-    }
+    };
     
     let connected = Arc::new(AtomicBool::new(false));
     let discord_task = tokio::spawn(discord_listener::run(cfg.clone(), payer.clone(), connected.clone()));

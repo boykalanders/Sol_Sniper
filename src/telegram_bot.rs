@@ -46,6 +46,37 @@ impl TelegramController {
     pub async fn start(self) -> Result<()> {
         info!("🤖 Starting Telegram bot...");
         
+        let mut retry_count = 0;
+        let max_retries = 5;
+        
+        loop {
+            match self.try_start().await {
+                Ok(_) => {
+                    info!("🤖 Telegram bot started successfully");
+                    break;
+                }
+                Err(e) => {
+                    retry_count += 1;
+                    error!("🤖 Telegram bot failed (attempt {}/{}): {}", retry_count, max_retries, e);
+                    
+                    if retry_count >= max_retries {
+                        error!("🤖 Telegram bot failed after {} attempts, giving up", max_retries);
+                        return Err(e);
+                    }
+                    
+                    // Wait before retrying (exponential backoff)
+                    let delay = std::time::Duration::from_secs(2_u64.pow(retry_count as u32));
+                    info!("🤖 Retrying Telegram bot in {} seconds...", delay.as_secs());
+                    tokio::time::sleep(delay).await;
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Try to start the Telegram bot with error handling
+    async fn try_start(self) -> Result<()> {
         let bot = self.bot.clone();
         let handler = Update::filter_message().branch(
             dptree::filter(|msg: Message| {
@@ -60,13 +91,31 @@ impl TelegramController {
             }),
         );
 
-        Dispatcher::builder(bot, handler)
+        // Add error handling for TerminatedByOtherGetUpdates
+        let dispatcher = Dispatcher::builder(bot, handler)
             .enable_ctrlc_handler()
-            .build()
-            .dispatch()
-            .await;
+            .build();
 
-        Ok(())
+        // Use a timeout to prevent hanging
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            dispatcher.dispatch()
+        ).await {
+            Ok(result) => {
+                if let Err(e) = result {
+                    if e.to_string().contains("TerminatedByOtherGetUpdates") {
+                        error!("🤖 Another bot instance is running with the same token");
+                        return Err(anyhow::anyhow!("Bot token already in use by another instance"));
+                    }
+                    return Err(anyhow::anyhow!("Telegram bot error: {}", e));
+                }
+                Ok(())
+            }
+            Err(_) => {
+                error!("🤖 Telegram bot startup timeout");
+                Err(anyhow::anyhow!("Telegram bot startup timeout"))
+            }
+        }
     }
 
     /// Handle incoming messages
