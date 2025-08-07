@@ -28,9 +28,8 @@ def test_message_parsing():
         print(f"\n📝 Test {i}: '{message}'")
         
         # Check for CA signal
-        content = message.lower()
         signal_pattern = r"(?i)\b(CA)\b"
-        has_signal = bool(re.search(signal_pattern, content))
+        has_signal = bool(re.search(signal_pattern, message))
         
         if has_signal:
             print("✅ CA signal detected")
@@ -44,7 +43,7 @@ def test_message_parsing():
             ]
             
             for j, pattern in enumerate(token_patterns, 1):
-                matches = re.findall(pattern, content)
+                matches = re.findall(pattern, message)
                 if matches:
                     print(f"✅ Pattern {j} matched: {matches}")
                     for match in matches:

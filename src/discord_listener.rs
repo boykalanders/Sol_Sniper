@@ -179,12 +179,10 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
 }
 
 async fn parse_trading_signal(content: &str) -> Option<Pubkey> {
-    let content = content.to_lowercase();
-    
     // First, check if message contains "CA" (Contract Address)
     let signal_patterns = [r"(?i)\b(CA)\b"];
     let has_signal = signal_patterns.iter().any(|pattern| {
-        Regex::new(pattern).unwrap().is_match(&content)
+        Regex::new(pattern).unwrap().is_match(content)
     });
     
     if !has_signal {
@@ -207,7 +205,7 @@ async fn parse_trading_signal(content: &str) -> Option<Pubkey> {
     
     for (i, pattern) in token_patterns.iter().enumerate() {
         if let Ok(re) = Regex::new(pattern) {
-            for cap in re.captures_iter(&content) {
+            for cap in re.captures_iter(content) {
                 if let Some(addr_match) = cap.get(1) {
                     let addr_str = addr_match.as_str();
                     info!("🔍 Pattern {} matched address: {}", i + 1, addr_str);

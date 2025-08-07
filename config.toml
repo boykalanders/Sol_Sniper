@@ -3,7 +3,6 @@ grpc_addr  = "http://nl.grpc.asuga.io:10000/"
 grpc_x_token = "YOUR_0SLOT_KEY"
 
 # Telegram & Discord
-tg_authorized_users = "["7535916412"]"
 tg_token   = "7675187926:AAF19_J0yLnIVzgRiV1vRuZO-G1X_YXHDKw"
 tg_chat    = "-1002799697131"
 tg_authorized_users = ["7675187926"]
