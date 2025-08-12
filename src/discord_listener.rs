@@ -120,12 +120,19 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
                             continue; // Silently ignore non-target channels
                         }
                         
-                        info!("📨 Message from target channel {}: {} - '{}'", channel_id, author_name, content);
+                        let is_bot = message["author"]["bot"].as_bool().unwrap_or(false);
+                        let author_type = if is_bot { "🤖 Bot" } else { "👤 User" };
                         
-                        if message["author"]["bot"].as_bool().unwrap_or(false) {
-                            info!("🤖 Skipping bot message from: {}", author_name);
-                            continue; // Silently ignore bot messages
-                        }
+                        info!("📨 Message from target channel {}: {} ({}) - '{}'", channel_id, author_name, author_type, content);
+                        
+                        // Forward ALL messages from target channels to Telegram (including bots)
+                        let forward_message = format!(
+                            "📨 Discord Message\nFrom: {} ({})\nChannel: {}\nContent: {}",
+                            author_name, author_type, channel_id, content
+                        );
+                        crate::notifier::log(forward_message).await;
+                        
+                        // Check for trading signals
                         if let Some(token_address) = parse_trading_signal(content).await {
                             info!("🎯 SIGNAL DETECTED! Token: {} | From: {} | Channel: {}", token_address, author_name, channel_id);
                             info!("📝 Message content: '{}'", content);
@@ -137,11 +144,11 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
                                 config_clone,
                                 payer_clone,
                             ));
-                            let notification = format!(
-                                "🚀 Token detected!\nToken: {}\nFrom: {}\nChannel: {}",
-                                token_address, author_name, channel_id
+                            let signal_notification = format!(
+                                "🚀 SIGNAL DETECTED!\nToken: {}\nFrom: {}\nChannel: {}\nMessage: {}",
+                                token_address, author_name, channel_id, content
                             );
-                            crate::notifier::log(notification).await;
+                            crate::notifier::log(signal_notification).await;
                         }
                     }
                 }
