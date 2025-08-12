@@ -115,10 +115,16 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
                         let author_name = message["author"]["username"].as_str().unwrap_or("Unknown");
                         let content = message["content"].as_str().unwrap_or("");
                         
-                        // Only log messages from target channels
+                        // Debug: Log all messages to see what channels we're receiving
+                        tracing::debug!("📨 Raw message from channel {}: {} - '{}'", channel_id, author_name, content);
+                        
+                        // Only process messages from target channels
                         if !channel_ids.contains(&channel_id.to_string()) {
+                            tracing::debug!("🚫 Ignoring message from non-target channel: {}", channel_id);
                             continue; // Silently ignore non-target channels
                         }
+                        
+                        info!("✅ Processing message from target channel: {}", channel_id);
                         
                         let is_bot = message["author"]["bot"].as_bool().unwrap_or(false);
                         let author_type = if is_bot { "🤖 Bot" } else { "👤 User" };
@@ -130,6 +136,7 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
                             "📨 Discord Message\nFrom: {} ({})\nChannel: {}\nContent: {}",
                             author_name, author_type, channel_id, content
                         );
+                        info!("📤 Forwarding to Telegram: {}", forward_message);
                         crate::notifier::log(forward_message).await;
                         
                         // Check for trading signals

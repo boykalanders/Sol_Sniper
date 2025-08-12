@@ -2,6 +2,7 @@ use anyhow::Result;
 use crate::Config;
 
 pub async fn log(msg: String) {
+    tracing::info!("📤 Notifier called with message: {}", msg);
     let cfg: Config = toml::from_str(
         &std::fs::read_to_string("config.toml").unwrap()
     ).unwrap();
@@ -19,8 +20,8 @@ pub async fn log(msg: String) {
 
 async fn tg(token: &str, chat: &str, msg: &str) -> Result<()> {
     let url = format!("https://api.telegram.org/bot{token}/sendMessage");
-    tracing::debug!("Sending to Telegram URL: {}", url);
-    tracing::debug!("Payload: chat_id={}, text={}", chat, msg);
+    tracing::info!("📤 Sending to Telegram URL: {}", url);
+    tracing::info!("📤 Telegram payload: chat_id={}, text={}", chat, msg);
     let response = reqwest::Client::new()
         .post(&url)
         .json(&serde_json::json!({
