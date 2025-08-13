@@ -56,6 +56,7 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
             "op": 2,
             "d": {
                 "token": token,
+                "intents": 33280,
                 "properties": {
                     "$os": "Windows",
                     "$browser": "Chrome",
