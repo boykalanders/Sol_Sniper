@@ -51,12 +51,11 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
             }
         })
     } else {
-        // User token - different format, but we still need intents for message content
+        // User token - different format, no intents needed
         json!({
             "op": 2,
             "d": {
                 "token": token,
-                "intents": 33280, // GUILD_MESSAGES (512) + MESSAGE_CONTENT (32768) = 33280
                 "properties": {
                     "$os": "Windows",
                     "$browser": "Chrome",
@@ -111,18 +110,13 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
                         info!("🎯 Discord Gateway READY - Logged in as: {} ({})", username, user_id);
                         info!("🎯 Target channels to monitor: {:?}", channel_ids);
                     } else if event_type == "MESSAGE_CREATE" {
-                        info!("📨 MESSAGE_CREATE event received");
                         let message = &event["d"];
                         let channel_id = message["channel_id"].as_str().unwrap_or("");
                         let author_name = message["author"]["username"].as_str().unwrap_or("Unknown");
                         let content = message["content"].as_str().unwrap_or("");
                         
-                        // Debug: Log all messages to see what channels we're receiving
-                        info!("📨 Raw message from channel {}: {} - '{}'", channel_id, author_name, content);
-                        
-                        // Only process messages from target channels
+                        // Only log messages from target channels
                         if !channel_ids.contains(&channel_id.to_string()) {
-                            info!("🚫 Ignoring message from non-target channel: {}", channel_id);
                             continue; // Silently ignore non-target channels
                         }
                         
@@ -141,7 +135,6 @@ async fn connect_and_listen(config: &Config, payer: Arc<Keypair>, connected: &Ar
                         info!("📤 Forwarding to Telegram: {}", forward_message);
                         crate::notifier::log(forward_message).await;
                         
-                        // Check for trading signals
                         if let Some(token_address) = parse_trading_signal(content).await {
                             info!("🎯 SIGNAL DETECTED! Token: {} | From: {} | Channel: {}", token_address, author_name, channel_id);
                             info!("📝 Message content: '{}'", content);
